@@ -1,0 +1,18 @@
+{
+  "name": "@mansomirror/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MansoMirror design tokens: colour, type, spacing, radius, elevation, motion.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./dist/tokens.css"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
