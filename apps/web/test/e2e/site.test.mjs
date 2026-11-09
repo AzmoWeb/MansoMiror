@@ -64,12 +64,18 @@ test("home renders every required section without console errors", async () => {
   await ctx.close();
 });
 
-test("downloads never offer a file while no release is published", async () => {
+test("downloads only link to real GitHub release files; mobile is not offered", async () => {
   const { ctx, page } = await open();
   const section = page.locator("#telecharger");
-  assert.equal(await section.locator("a[download]").count(), 0);
-  assert.equal(await section.getByText("Pas encore disponible").count(), 4);
-  assert.equal(await page.getByTestId("no-release").count(), 1);
+  for (const id of ["android", "ios"]) {
+    const row = section.locator(`[data-platform="${id}"]`);
+    assert.equal(await row.locator("a[download]").count(), 0);
+    assert.equal(await row.getByText("Pas encore disponible").count(), 1);
+  }
+  const links = await section.locator("a[download]").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
+  for (const href of links) assert.match(href, /^https:\/\/github\.com\/AzmoWeb\/MansoMiror\/releases\/download\//);
+  if (links.length) assert.equal(await page.getByTestId("beta-warning").count(), 1);
+  else assert.equal(await page.getByTestId("no-release").count(), 1);
   await ctx.close();
 });
 

@@ -1,35 +1,45 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { latestRelease, isValidRelease, formatSize, releases, platforms, type Release } from "../../src/content/releases.ts";
+import { latestRelease, latestFiles, isValidRelease, formatSize, compareSemver, releases, type Release } from "../../src/content/releases.ts";
 
 const base: Release = {
   platform: "windows",
   version: "1.0.0",
+  format: "Installeur .exe",
   publishedAt: "2027-01-10",
   sizeBytes: 42_000_000,
   url: "https://example.org/mm.exe",
   sha256: "a".repeat(64),
 };
 
-test("no release is published yet, so every platform shows no download", () => {
-  assert.equal(releases.length, 0);
-  for (const p of platforms) assert.equal(latestRelease(p.id), null);
+test("every published entry is valid (https URL, real checksum, size)", () => {
+  for (const r of releases) assert.ok(isValidRelease(r), `${r.platform} ${r.format}`);
+});
+
+test("mobile apps are not published yet", () => {
+  assert.equal(latestRelease("android"), null);
+  assert.equal(latestRelease("ios"), null);
 });
 
 test("latestRelease picks the highest semver and ignores other platforms", () => {
-  const list: Release[] = [
-    base,
-    { ...base, version: "1.2.0" },
-    { ...base, version: "1.10.0" },
-    { ...base, version: "2.0.0", platform: "macos" },
-  ];
+  const list: Release[] = [base, { ...base, version: "1.2.0" }, { ...base, version: "1.10.0" }, { ...base, version: "2.0.0", platform: "macos" }];
   assert.equal(latestRelease("windows", list)?.version, "1.10.0");
   assert.equal(latestRelease("android", list), null);
 });
 
-test("a stable release outranks its pre-release", () => {
-  const list = [{ ...base, version: "1.0.0-beta.2" }, base];
-  assert.equal(latestRelease("windows", list)?.version, "1.0.0");
+test("pre-releases order correctly and rank below the stable version", () => {
+  assert.ok(compareSemver("1.0.0-beta.2", "1.0.0-beta.10") < 0);
+  assert.ok(compareSemver("1.0.0", "1.0.0-beta.10") > 0);
+  assert.equal(latestRelease("windows", [{ ...base, version: "1.0.0-beta.2" }, base])?.version, "1.0.0");
+});
+
+test("latestFiles returns every format of the newest version only", () => {
+  const list: Release[] = [
+    { ...base, platform: "linux", version: "0.1.0", format: "AppImage" },
+    { ...base, platform: "linux", version: "0.2.0", format: "AppImage" },
+    { ...base, platform: "linux", version: "0.2.0", format: ".deb" },
+  ];
+  assert.deepEqual(latestFiles("linux", list).map((f) => f.format), ["AppImage", ".deb"]);
 });
 
 test("invalid entries are never offered for download", () => {

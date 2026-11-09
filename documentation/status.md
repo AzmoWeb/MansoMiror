@@ -15,8 +15,13 @@ Règle : une ligne passe en ✅ seulement si elle est développée **et** testé
 | Intégration continue (GitHub Actions) | ✅ écrite | `.github/workflows/ci.yml` — pas encore vue tourner sur GitHub |
 | Site web — déploiement en ligne, mesure Lighthouse | ⏳ | nécessite un hébergeur (Vercel, Netlify…) |
 | Composants UI partagés (`packages/ui`) | ⏳ | à extraire du site quand le desktop en aura besoin |
-| Desktop, mobile, backend, admin | ⏳ | phases 3 à 6 |
+| Desktop (Electron) — partage d'écran entre ordinateurs en réseau local, appairage sécurisé, consentement, « Tout couper », captures, enregistrement, historique, paramètres | ✅ | `apps/desktop` — 16 tests unitaires/réseau + 10 tests e2e avec deux instances réelles ; détail dans `documentation/desktop.md` |
+| Desktop — paquets Linux (AppImage, .deb) | ✅ | compilés et lancés ici |
+| Desktop — installeur Windows `.exe`, `.dmg` macOS | ⏳ | compilés par GitHub Actions ; à tester sur de vraies machines ; non signés |
+| Desktop — contrôle à distance, son, appareils de confiance, connexion hors réseau local | ⏳ | prévus |
+| Site — publication GitHub Pages | ⏳ | workflow prêt ; à activer dans Settings → Pages |
+| Mobile, backend, admin | ⏳ | phases 4 à 6 |
 
-Rien n'est encore téléchargeable : aucun binaire n'a été compilé ni publié. La section Téléchargements du site
-lit `apps/web/src/content/releases.ts`, qui est vide ; elle affiche donc « Pas encore disponible ».
+La section Téléchargements du site lit `apps/web/src/content/releases.ts`. Seuls des fichiers réellement publiés sur
+GitHub, avec leur empreinte SHA-256, peuvent y figurer.
 La démo du site est une **maquette** clairement signalée comme telle : aucun appareil n'y est connecté.

@@ -5,12 +5,14 @@
 **Your screen. Everywhere. Seamlessly.**
 Écosystème de recopie d'écran et de contrôle à distance : Web, Desktop (Windows/macOS), Mobile (Android/iOS), Backend, Admin.
 
-> ⚠️ Projet en **phase 1 (conception et identité)**. Aucune application n'est encore disponible au téléchargement.
+> **État** : site web et application desktop (bêta : partage d'écran entre ordinateurs sur le réseau local).
+> L'application mobile, le serveur et l'administration ne sont pas encore développés.
 > Voir [`documentation/status.md`](documentation/status.md) pour l'état réel de chaque fonctionnalité.
 
 ## Documentation
 
 - [Architecture, technologies, limitations des plateformes, feuille de route](documentation/architecture.md)
+- [Application desktop : fonctions, sécurité, compilation](documentation/desktop.md)
 - [Direction artistique](documentation/brand.md)
 - [État d'avancement](documentation/status.md)
 
@@ -30,6 +32,7 @@ pnpm --filter @mansomirror/web dev # site en local sur http://localhost:3000
 
 ```
 apps/web/                 site officiel (Next.js, Tailwind CSS, Motion)
+apps/desktop/             application Windows / macOS / Linux (Electron, React, WebRTC)
 brand/                    logo, icône d'app, wordmark
 documentation/            architecture, charte, état
 packages/design-tokens/   couleurs, typographie, espacements, motion (TS + CSS)
