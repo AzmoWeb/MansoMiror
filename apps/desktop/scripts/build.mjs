@@ -1,12 +1,16 @@
 // Bundles main, preload and renderer into dist/ with esbuild.
 import { build } from "esbuild";
 import { cpSync, mkdirSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "dist");
 const prod = process.env.NODE_ENV !== "development";
+
+// The renderer imports the generated design-token CSS: build it first.
+execFileSync(process.execPath, [join(root, "..", "..", "packages", "design-tokens", "scripts", "build.ts")], { stdio: "inherit" });
 rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, "renderer"), { recursive: true });
 
