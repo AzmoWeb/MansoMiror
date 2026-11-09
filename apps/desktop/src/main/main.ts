@@ -135,7 +135,14 @@ function registerIpc() {
   handle(IPC.clearHistory, () => store.clearHistory());
 
   handle(IPC.listSources, async (): Promise<CaptureSource[]> => {
-    const sources = await desktopCapturer.getSources({ types: ["screen", "window"], thumbnailSize: { width: 320, height: 180 } });
+    // Screens and windows are listed separately: on some systems the combined
+    // request intermittently comes back empty when window enumeration fails.
+    const opts = { thumbnailSize: { width: 320, height: 180 } };
+    const [screens, windows] = await Promise.all([
+      desktopCapturer.getSources({ ...opts, types: ["screen"] }).catch(() => []),
+      desktopCapturer.getSources({ ...opts, types: ["window"] }).catch(() => []),
+    ]);
+    const sources = [...screens, ...windows];
     listedSources = new Map(sources.map((s) => [s.id, s]));
     return sources.map((s) => ({
       id: s.id,
