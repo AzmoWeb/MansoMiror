@@ -10,5 +10,11 @@
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "test:e2e": "pnpm --filter @mansomirror/web test:e2e"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
   }
 }

@@ -1,0 +1,60 @@
+appId: com.mansomirror.desktop
+productName: MansoMirror
+executableName: mansomirror
+copyright: Copyright © 2026 MansoMirror
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**
+  - package.json
+asar: true
+# Electron fuses: turn off ways to run arbitrary code through the shipped binary.
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+artifactName: "MansoMirror-${version}-${os}-${arch}.${ext}"
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: "MansoMirror-Setup-${version}-x64.${ext}"
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: MansoMirror
+  installerLanguages: [fr_FR, en_US]
+  language: "1036"
+  deleteAppDataOnUninstall: false
+
+linux:
+  executableName: mansomirror
+  syncDesktopName: true
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Network
+  synopsis: Partage d'écran sécurisé entre ordinateurs
+  maintainer: MansoMirror <noreply@users.noreply.github.com>
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  category: public.app-category.utilities
+  hardenedRuntime: true
+  extendInfo:
+    NSScreenCaptureUsageDescription: MansoMirror a besoin d'enregistrer l'écran pour le partager avec l'ordinateur que vous autorisez.
+
+publish: null

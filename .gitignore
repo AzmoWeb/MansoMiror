@@ -10,3 +10,5 @@ dist/
 target/
 *.tsbuildinfo
 next-env.d.ts
+apps/desktop/release/
+apps/web/out/

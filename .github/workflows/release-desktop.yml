@@ -1,0 +1,78 @@
+name: Release desktop
+
+# Builds MansoMirror Desktop on real Windows, macOS and Linux machines and
+# attaches the installers + SHA-256 checksums to a GitHub (pre-)release.
+on:
+  push:
+    tags: ["desktop-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+          - os: macos-latest
+            target: --mac
+          - os: ubuntu-latest
+            target: --linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Ensure the Electron binary is downloaded
+        run: node apps/desktop/node_modules/electron/install.js
+      - name: Unit tests
+        run: pnpm --filter @mansomirror/desktop test
+      - name: Build installers
+        working-directory: apps/desktop
+        env:
+          # No signing certificate yet: builds are unsigned (see documentation/desktop.md).
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: pnpm dist ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Checksums
+        working-directory: out
+        run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          name: MansoMirror Desktop ${{ github.ref_name }} (bêta, non signée)
+          body: |
+            Version bêta de MansoMirror Desktop : partage d'écran entre ordinateurs sur le réseau local.
+
+            ⚠️ Les installeurs ne sont **pas encore signés** :
+            - Windows affichera « Windows a protégé votre ordinateur » → « Informations complémentaires » → « Exécuter quand même ».
+            - macOS : clic droit sur l'application → « Ouvrir ».
+
+            Vérifiez l'empreinte de votre fichier avec `SHA256SUMS.txt`.
+          files: out/*

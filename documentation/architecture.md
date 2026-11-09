@@ -37,7 +37,7 @@ fortement de chaque système, et ce sont elles qui fixent le planning.
                            │ auth, appareils,    │ offres/réponses SDP, ICE,
                            │ historique          │ invitations, révocations
    ┌───────────────────────┴───┐            ┌────┴──────────────────────┐
-   │ Desktop (Tauri + Rust)    │◀══ WebRTC ═▶│ Mobile (RN + modules natifs)│
+   │ Desktop (Electron)        │◀══ WebRTC ═▶│ Mobile (RN + modules natifs)│
    │ capture · encodage · rendu│  DTLS-SRTP  │ capture · encodage          │
    │ injection d'entrées       │  P2P / TURN │ (Android : entrées via ADB) │
    └───────────────────────────┘            └─────────────────────────────┘
@@ -61,7 +61,7 @@ Principes :
 | Produit | Choix | Justification |
 |---|---|---|
 | **Web** | Next.js (App Router) + TypeScript + Tailwind CSS + Framer Motion | SSG pour le SEO et les performances, conforme au cahier des charges |
-| **Desktop** | **Tauri 2** (Rust + webview) + React/TypeScript | Electron embarque Chromium (~150 Mo, RAM élevée) et rend la capture native malcommode. En Rust, on accède directement à DXGI Desktop Duplication / Windows.Graphics.Capture, à ScreenCaptureKit, à Media Foundation / VideoToolbox, et au crate `webrtc-rs`, ou à libwebrtc via FFI si la qualité l'exige. L'interface est partagée avec le web |
+| **Desktop** | **Electron** + React/TypeScript (choix du porteur du projet ; Tauri 2 avait été évalué en premier) | Un seul code pour Windows, macOS et Linux ; WebRTC et capture d'écran fournis par Chromium (`desktopCapturer`). Contreparties : application plus lourde (~100–125 Mo) et modules natifs nécessaires pour le contrôle à distance |
 | **Mobile** | React Native (New Architecture) + **modules natifs** Kotlin/Swift | L'UI, la navigation et l'appairage sont en RN ; capture, encodage et WebRTC restent natifs (MediaProjection + MediaCodec ; ReplayKit + VideoToolbox) |
 | **API** | Node.js + TypeScript + Fastify + Drizzle ORM + PostgreSQL 16 | Typage partagé avec le front, migrations SQL versionnées |
 | **Signalisation** | Node.js + `ws` + Redis pub/sub | Scalable horizontalement, la présence est stockée dans Redis avec un TTL |
