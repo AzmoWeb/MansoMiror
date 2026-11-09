@@ -20,13 +20,16 @@ Prérequis : Node.js ≥ 22.18, pnpm 10.
 
 ```bash
 pnpm install
-pnpm test     # tests de tous les paquets
-pnpm build    # génère packages/design-tokens/dist/tokens.css
+pnpm test                          # tests unitaires de tous les paquets
+pnpm build                         # tokens CSS + build de production du site
+pnpm test:e2e                      # tests navigateur du site (après pnpm build)
+pnpm --filter @mansomirror/web dev # site en local sur http://localhost:3000
 ```
 
 ## Structure actuelle
 
 ```
+apps/web/                 site officiel (Next.js, Tailwind CSS, Motion)
 brand/                    logo, icône d'app, wordmark
 documentation/            architecture, charte, état
 packages/design-tokens/   couleurs, typographie, espacements, motion (TS + CSS)
