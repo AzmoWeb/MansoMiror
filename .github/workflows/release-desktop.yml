@@ -2,10 +2,23 @@ name: Release desktop
 
 # Builds MansoMirror Desktop on real Windows, macOS and Linux machines and
 # attaches the installers + SHA-256 checksums to a GitHub (pre-)release.
+# Two ways to run it:
+#  - push a tag "desktop-vX.Y.Z[-beta.N]";
+#  - Actions tab → "Release desktop" → "Run workflow": builds on every OS,
+#    and publishes a pre-release only if "publish" is ticked.
 on:
   push:
     tags: ["desktop-v*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 0.1.0-beta.1)"
+        required: true
+        default: "0.1.0-beta.1"
+      publish:
+        description: "Publish a GitHub pre-release with the installers"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -53,7 +66,7 @@ jobs:
 
   publish:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    if: startsWith(github.ref, 'refs/tags/desktop-v') || inputs.publish
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -66,7 +79,9 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           prerelease: true
-          name: MansoMirror Desktop ${{ github.ref_name }} (bêta, non signée)
+          tag_name: ${{ inputs.version && format('desktop-v{0}', inputs.version) || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: MansoMirror Desktop ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }} (bêta, non signée)
           body: |
             Version bêta de MansoMirror Desktop : partage d'écran entre ordinateurs sur le réseau local.
 
