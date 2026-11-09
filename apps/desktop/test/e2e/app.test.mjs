@@ -43,7 +43,8 @@ test("renderer is isolated: no Node, only the narrow API", { timeout: 60_000 }, 
     require: typeof window.require,
     process: typeof window.process,
     api: Object.keys(window.mm).sort(),
-    popup: window.open("https://example.org") === null,
+    // Not https, so the app neither opens it nor hands it to the system browser.
+    popup: window.open("file:///etc/hostname") === null,
   }));
   assert.equal(r.require, "undefined");
   assert.equal(r.process, "undefined");

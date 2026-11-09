@@ -27,7 +27,7 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit -p .",
     "test": "node --test \"test/unit/**/*.test.ts\"",
-    "test:e2e": "node scripts/build.mjs && node --test --test-concurrency=1 \"test/e2e/**/*.test.mjs\"",
+    "test:e2e": "node scripts/build.mjs && node --test --test-force-exit --test-concurrency=1 \"test/e2e/**/*.test.mjs\"",
     "dist": "node scripts/build.mjs && electron-builder --publish never"
   },
   "homepage": "https://github.com/AzmoWeb/MansoMiror",
