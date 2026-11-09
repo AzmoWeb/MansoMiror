@@ -38,7 +38,7 @@ after(async () => {
   for (const d of dirs) rmSync(d, { recursive: true, force: true });
 });
 
-test("renderer is isolated: no Node, only the narrow API", async () => {
+test("renderer is isolated: no Node, only the narrow API", { timeout: 60_000 }, async () => {
   const r = await pb.evaluate(() => ({
     require: typeof window.require,
     process: typeof window.process,
@@ -51,7 +51,7 @@ test("renderer is isolated: no Node, only the narrow API", async () => {
   assert.equal(r.popup, true);
 });
 
-test("CSP blocks inline scripts", async () => {
+test("CSP blocks inline scripts", { timeout: 60_000 }, async () => {
   const blocked = await pb.evaluate(() => {
     const s = document.createElement("script");
     s.textContent = "window.__inlineRan = true";
@@ -63,7 +63,7 @@ test("CSP blocks inline scripts", async () => {
 
 let pin = "";
 
-test("A starts sharing and shows a 6-digit PIN", async () => {
+test("A starts sharing and shows a 6-digit PIN", { timeout: 60_000 }, async () => {
   await pa.getByRole("button", { name: "Choisir l'écran à partager" }).click();
   // Right after Xvfb starts, the capturer can briefly report no screen: use "Actualiser" like a user would.
   for (let i = 0; i < 20 && (await pa.locator(".source").count()) === 0; i++) {
@@ -77,7 +77,7 @@ test("A starts sharing and shows a 6-digit PIN", async () => {
   if (SHOTS) await pa.screenshot({ path: `${SHOTS}/host-waiting.png` });
 });
 
-test("B discovers A on the local network (mDNS) while A waits for a viewer", async () => {
+test("B discovers A on the local network (mDNS) while A waits for a viewer", { timeout: 60_000 }, async () => {
   const item = pb.locator(".device-list li").first();
   await item.waitFor({ timeout: 15000 });
   assert.match(await item.innerText(), /127\.0\.0\.1|\d+\.\d+\.\d+\.\d+/);
@@ -89,7 +89,7 @@ async function openPinDialog() {
   await pb.getByLabel("Code à 6 chiffres").waitFor();
 }
 
-test("B is told when the PIN is wrong, and A is warned", async () => {
+test("B is told when the PIN is wrong, and A is warned", { timeout: 60_000 }, async () => {
   await openPinDialog();
   const wrong = String((Number(pin) + 1) % 1e6).padStart(6, "0");
   await pb.getByLabel("Code à 6 chiffres").fill(wrong);
@@ -99,7 +99,7 @@ test("B is told when the PIN is wrong, and A is warned", async () => {
   assert.equal(await pa.getByText("Demande de connexion").count(), 0, "A is never asked for a wrong PIN");
 });
 
-test("correct PIN → A must consent → B receives live video", async () => {
+test("correct PIN → A must consent → B receives live video", { timeout: 60_000 }, async () => {
   await pb.getByLabel("Code à 6 chiffres").fill(pin);
   await pb.getByRole("dialog").getByRole("button", { name: "Se connecter" }).click();
   await pa.getByRole("dialog", { name: "Demande de connexion" }).waitFor({ timeout: 15000 });
@@ -123,12 +123,12 @@ test("correct PIN → A must consent → B receives live video", async () => {
   }
 });
 
-test("starting a recording on B is announced on A", async () => {
+test("starting a recording on B is announced on A", { timeout: 60_000 }, async () => {
   await pb.getByRole("button", { name: "Enregistrer" }).click();
   await pa.getByText(/enregistre votre écran/).first().waitFor({ timeout: 5000 });
 });
 
-test("the PIN cannot be reused by a third party once paired", async () => {
+test("the PIN cannot be reused by a third party once paired", { timeout: 60_000 }, async () => {
   const r = await pb.evaluate(async (p) => {
     const pc = new RTCPeerConnection();
     pc.addTransceiver("video");
@@ -140,7 +140,7 @@ test("the PIN cannot be reused by a third party once paired", async () => {
   assert.equal(r.ok, false);
 });
 
-test("kill switch on A ends the session on both sides", async () => {
+test("kill switch on A ends the session on both sides", { timeout: 60_000 }, async () => {
   await pa.getByRole("button", { name: "Tout couper" }).first().click();
   await pa.getByText("Toutes les connexions ont été coupées.").waitFor();
   await pb.waitForSelector(".shell", { timeout: 10000 });
@@ -148,7 +148,7 @@ test("kill switch on A ends the session on both sides", async () => {
   assert.equal(await pa.getByTestId("pin").count(), 0);
 });
 
-test("the session is recorded in both histories", async () => {
+test("the session is recorded in both histories", { timeout: 60_000 }, async () => {
   for (const [p, role] of [[pa, "Partagé"], [pb, "Regardé"]]) {
     await p.getByRole("button", { name: "Historique" }).click();
     await p.getByRole("cell", { name: role }).waitFor();
