@@ -8,7 +8,14 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Bonjour, type Service } from "bonjour-service";
 import { mkdirSync } from "node:fs";
-import { AirPlayReceiver, airplayArgs, findUxPlay, runtimeEnv } from "../../src/main/airplay.ts";
+import { AirPlayReceiver, airplayArgs, airplayName, findUxPlay, runtimeEnv } from "../../src/main/airplay.ts";
+
+test("AirPlay name is plain ASCII (UxPlay on Windows quits on anything else)", () => {
+  assert.equal(airplayName("DESKTOP-TST72EU"), "DESKTOP-TST72EU - MansoMirror");
+  assert.equal(airplayName("PC de Léa · salon"), "PC de Lea salon - MansoMirror");
+  assert.equal(airplayName("📱📱"), "PC - MansoMirror");
+  for (const n of ["Ordinateur à Noël", "Ünïcödé", "日本語"]) assert.match(airplayName(n), /^[\x20-\x7e]+$/);
+});
 
 test("arguments: exact name, mandatory 4-digit code, stale session reset", () => {
   const a = airplayArgs("PC-Salon · MansoMirror", "0427");
@@ -94,7 +101,7 @@ test("real UxPlay: announced as an AirPlay receiver under our name, then stopped
       });
     });
     assert.ok(found, `receiver not announced on mDNS. UxPlay said:\n${logs.join("\n")}`);
-    assert.equal(found.name, `${name} · MansoMirror`);
+    assert.equal(found.name, `${name} - MansoMirror`);
     // iOS uses these TXT records to list the device as a screen-mirroring target.
     assert.ok(found.txt && typeof found.txt === "object");
   } finally {

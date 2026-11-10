@@ -70,6 +70,21 @@ export function airplayArgs(name: string, pin: string, platform: NodeJS.Platform
   ];
 }
 
+/**
+ * Name shown in the iPhone's "Recopie de l'écran" list. ASCII only: on Windows,
+ * UxPlay reads its arguments in the ANSI code page and quits (exit code 0) on
+ * any other character — "·", accents, emoji…
+ */
+export function airplayName(deviceName: string): string {
+  const ascii = cleanName(deviceName)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // é → e
+    .replace(/[^\x20-\x7e]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `${ascii || "PC"} - MansoMirror`.slice(0, 60);
+}
+
 /** UxPlay >= 1.74 can hand the stream to us (-vrtp); older builds only show their own window. */
 export function supportsInApp(bin: string, env: NodeJS.ProcessEnv = process.env): boolean {
   try {
@@ -142,7 +157,7 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
   async start(deviceName: string): Promise<AirPlayState> {
     if (!this.bin) return this.state;
     if (this.proc) return this.state;
-    const name = `${cleanName(deviceName)} · MansoMirror`.slice(0, 60);
+    const name = airplayName(deviceName);
     const pin = String(randomInt(0, 10_000)).padStart(4, "0");
     const env = runtimeEnv(this.bin, process.env, this.registryDir);
     this.inApp ??= supportsInApp(this.bin, env);
