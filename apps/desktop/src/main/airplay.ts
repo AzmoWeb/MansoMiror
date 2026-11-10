@@ -31,6 +31,8 @@ export type AirPlayState =
       videoPort: number;
       /** Something that can keep the iPhone from seeing this PC (e.g. firewall not allowed). */
       notice?: string;
+      /** Self-check: addresses the announcement carries as seen on this PC (null: not seen). */
+      announced?: string[] | null;
     }
   | { status: "error"; message: string };
 
@@ -128,6 +130,11 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
 
   /** Shown with the running state (set by the app, e.g. firewall refused). */
   notice?: string;
+
+  /** Adds self-check results to the running state. */
+  annotate(patch: { announced?: string[] | null }) {
+    if (this.state.status === "running") this.set({ ...this.state, ...patch });
+  }
 
   get binary(): string | null {
     return this.bin;

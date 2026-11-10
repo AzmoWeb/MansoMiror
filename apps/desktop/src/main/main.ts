@@ -1,4 +1,5 @@
 import { networkInterfaces } from "node:os";
+import { Bonjour, type Service } from "bonjour-service";
 import { app, BrowserWindow, desktopCapturer, dialog, type DesktopCapturerSource, globalShortcut, ipcMain, protocol, session, shell, type IpcMainInvokeEvent } from "electron";
 import { join, normalize, extname, sep } from "node:path";
 import { readFileSync, writeFileSync, mkdirSync, appendFileSync, statSync } from "node:fs";
@@ -92,6 +93,25 @@ let deviceId = "";
 const host = new HostServer(() => store.settings.deviceName);
 const viewer = new ViewerClient();
 const discovery = new Discovery();
+/** Looks for our own AirPlay announcement on the network, as an iPhone would,
+ *  and reports the address it carries (shown in the app and in main.log). */
+async function selfCheckAirPlay(name: string) {
+  const bonjour = new Bonjour();
+  const found = await new Promise<Service | null>((res) => {
+    const t = setTimeout(() => res(null), 8000);
+    bonjour.find({ type: "airplay" }).on("up", (s: Service) => {
+      if (s.name === name) {
+        clearTimeout(t);
+        res(s);
+      }
+    });
+  });
+  bonjour.destroy();
+  const addrs = found ? (found.addresses ?? []).filter((a) => a.includes(".")) : null;
+  logLine(`airplay self-check: ${found ? `announced ${found.host} [${addrs!.join(", ")}] port ${found.port}` : "announcement NOT seen"}`);
+  airplay.annotate({ announced: addrs });
+}
+
 const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
 app.whenReady().then(() => (airplay.registryDir = app.getPath("userData")));
 airplay.on("state", (st) => {
@@ -308,7 +328,9 @@ function registerIpc() {
       for (const [name, list] of Object.entries(networkInterfaces())) {
         for (const a of list ?? []) if (a.family === "IPv4" && !a.internal) logLine(`network: ${name} ${a.address}`);
       }
-      return await airplay.start(store.settings.deviceName);
+      const st = await airplay.start(store.settings.deviceName);
+      if (st.status === "running") void selfCheckAirPlay(st.name);
+      return st;
     } catch (e) {
       logLine(`airplay start failed: ${(e as Error).message}`);
       return { status: "error", message: `Démarrage impossible : ${(e as Error).message}` };

@@ -1,35 +1,39 @@
 diff --git a/lib/mdnsd/mdnsd.c b/lib/mdnsd/mdnsd.c
-index 97a1ba6..2fd22e5 100644
+index 97a1ba6..da7906a 100644
 --- a/lib/mdnsd/mdnsd.c
 +++ b/lib/mdnsd/mdnsd.c
-@@ -389,6 +389,30 @@ static uint32_t mdns_get_default_ipv4(void)
-         }
-     }
-     free(pAddresses);
-+    if (addr == 0) {
-+        /* No adapter passed the filters above (e.g. a Hyper-V virtual machine):
-+           use the interface Windows routes to the mDNS group, then the default
-+           route's interface. connect() on UDP sends nothing. */
-+        const char *targets[2] = { MDNS_ADDR4, "8.8.8.8" };
+@@ -349,6 +349,34 @@ static uint32_t mdns_get_default_ipv4(void)
+ {
+     uint32_t addr = 0;
+ #ifdef _WIN32
++    /* MansoMirror: first use the interface of the default route (the real
++       LAN in almost every home setup), so that VPN/virtual adapters listed
++       first (Radmin, Hamachi, ZeroTier, TAP...) are not announced instead.
++       connect() on a UDP socket sends nothing. */
++    {
++        const char *targets[2] = { "8.8.8.8", MDNS_ADDR4 };
 +        for (int i = 0; i < 2 && addr == 0; i++) {
-+            SOCKET fd = socket(AF_INET, SOCK_DGRAM, 0);
++            SOCKET probe = socket(AF_INET, SOCK_DGRAM, 0);
 +            struct sockaddr_in remote;
 +            struct sockaddr_in local;
 +            int local_len = sizeof(local);
-+            if (fd == INVALID_SOCKET) {
++            if (probe == INVALID_SOCKET) {
 +                break;
 +            }
 +            memset(&remote, 0, sizeof(remote));
 +            remote.sin_family = AF_INET;
 +            remote.sin_port = htons(MDNS_PORT);
 +            inet_pton(AF_INET, targets[i], &remote.sin_addr);
-+            if (connect(fd, (struct sockaddr *) &remote, sizeof(remote)) == 0 &&
-+                getsockname(fd, (struct sockaddr *) &local, &local_len) == 0) {
++            if (connect(probe, (struct sockaddr *) &remote, sizeof(remote)) == 0 &&
++                getsockname(probe, (struct sockaddr *) &local, &local_len) == 0) {
 +                addr = local.sin_addr.s_addr;
 +            }
-+            closesocket(fd);
++            closesocket(probe);
++        }
++        if (addr != 0) {
++            return addr;
 +        }
 +    }
- #else    
-     int fd;
-     struct sockaddr_in remote;
+     ULONG buflen = 15000;
+     PIP_ADAPTER_ADDRESSES pAddresses = NULL;
+     DWORD dwRetVal = 0;
