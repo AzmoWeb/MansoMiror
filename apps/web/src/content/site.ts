@@ -11,141 +11,130 @@ export const nav = [
 ] as const;
 
 /** Feature ids double as anchors into the annotated product view. */
-export type FeatureId = "mirror" | "wifi" | "usb" | "control" | "record" | "screenshot" | "multi" | "bidirectional";
+export type FeatureId = "mirror" | "iphone" | "android" | "control" | "sound" | "quality" | "screenshot" | "record";
 
 export const features: { id: FeatureId; title: string; body: string }[] = [
   {
     id: "mirror",
-    title: "Duplication en temps réel",
-    body: "L'écran du téléphone s'affiche dans une fenêtre redimensionnable, encodé par la puce vidéo de l'appareil pour garder une latence basse.",
+    title: "Le téléphone en grand sur le PC",
+    body: "L'écran du téléphone s'affiche dans la fenêtre MansoMirror, en grand ou en plein écran, en temps réel.",
   },
   {
-    id: "wifi",
-    title: "Connexion Wi-Fi",
-    body: "Les appareils d'un même réseau se trouvent automatiquement. Le flux va directement de l'un à l'autre, sans passer par nos serveurs.",
+    id: "iphone",
+    title: "iPhone et iPad, sans rien installer",
+    body: "Sur l'iPhone : Centre de contrôle, « Recopie de l'écran », choisissez votre PC et saisissez le code affiché. C'est tout.",
   },
   {
-    id: "usb",
-    title: "Connexion USB",
-    body: "Branchez un Android : la connexion par câble offre la latence la plus faible et fonctionne sans aucun réseau.",
+    id: "android",
+    title: "Android en USB ou en Wi-Fi",
+    body: "Branchez le câble (ou activez le débogage sans fil sur Android 11+) : le téléphone apparaît dans la liste, un clic suffit.",
   },
   {
     id: "control",
-    title: "Contrôle à distance",
-    body: "Cliquez et tapez sur l'écran recopié pour piloter le téléphone, lorsque le système le permet (Android via USB).",
+    title: "Contrôle d'Android à la souris",
+    body: "Cliquez, glissez, faites défiler et tapez au clavier sur l'écran du téléphone, directement depuis le PC.",
   },
   {
-    id: "record",
-    title: "Enregistrement vidéo",
-    body: "Enregistrez la session en MP4, directement sur votre ordinateur. Rien n'est stocké en ligne.",
+    id: "sound",
+    title: "Le son sur l'ordinateur",
+    body: "Le son de l'iPhone sort des haut-parleurs du PC. Pour Android, le son arrive dans une prochaine version (Android 11+).",
+  },
+  {
+    id: "quality",
+    title: "Haute qualité, faible latence",
+    body: "Jusqu'à 1080p à 60 images par seconde, décodées par la carte graphique de l'ordinateur. Le flux reste sur votre réseau.",
   },
   {
     id: "screenshot",
     title: "Captures d'écran",
-    body: "Une image nette de l'écran recopié, en pleine résolution, en un clic ou un raccourci.",
+    body: "Une image nette de l'écran du téléphone, en pleine résolution, en un clic.",
   },
   {
-    id: "multi",
-    title: "Plusieurs appareils",
-    body: "Gérez vos téléphones et ordinateurs depuis une seule liste, avec un historique et des appareils de confiance.",
-  },
-  {
-    id: "bidirectional",
-    title: "Dans les deux sens",
-    body: "Recopiez votre téléphone sur l'ordinateur, ou affichez l'écran de l'ordinateur sur votre téléphone.",
+    id: "record",
+    title: "Enregistrement",
+    body: "Enregistrez ce qui se passe sur le téléphone, directement sur votre ordinateur. Rien n'est envoyé en ligne.",
   },
 ];
 
-export type Support = "planned" | "limited" | "studying" | "impossible";
+export type Support = "available" | "planned" | "studying" | "impossible";
 
 export const supportLabel: Record<Support, string> = {
+  available: "Disponible (bêta)",
   planned: "Prévu",
-  limited: "Prévu, avec limites",
   studying: "À l'étude",
   impossible: "Impossible",
 };
 
-export const compatColumns = ["Windows", "macOS", "Android", "iOS / iPadOS"] as const;
+export const compatColumns = ["iPhone / iPad", "Android"] as const;
 
 export const compatRows: { feature: string; cells: { s: Support; note?: string }[] }[] = [
   {
-    feature: "Partager l'écran de cet appareil",
+    feature: "Écran du téléphone affiché sur le PC",
     cells: [
-      { s: "planned" },
-      { s: "planned", note: "Permission « Enregistrement de l'écran » requise." },
-      { s: "planned", note: "Android demande votre accord à chaque session." },
-      { s: "limited", note: "Lancé par vous depuis le Centre de contrôle (ReplayKit)." },
+      { s: "available", note: "Via « Recopie de l'écran » (AirPlay), sur le même Wi-Fi." },
+      { s: "available", note: "Débogage USB à activer une fois dans les options pour les développeurs." },
     ],
   },
+  { feature: "Son sur le PC", cells: [{ s: "available" }, { s: "planned", note: "Android 11 et plus récent." }] },
   {
-    feature: "Afficher l'écran d'un autre appareil",
-    cells: [{ s: "planned" }, { s: "planned" }, { s: "planned" }, { s: "planned" }],
+    feature: "Contrôle à la souris et au clavier",
+    cells: [{ s: "impossible", note: "iOS n'autorise aucune application à piloter l'iPhone." }, { s: "available" }],
   },
-  {
-    feature: "Être contrôlé à distance",
-    cells: [
-      { s: "planned" },
-      { s: "planned", note: "Permission « Accessibilité » requise." },
-      { s: "limited", note: "Via câble USB et débogage ADB." },
-      { s: "impossible", note: "iOS n'autorise aucune application à piloter l'appareil." },
-    ],
-  },
-  {
-    feature: "Connexion USB",
-    cells: [{ s: "planned" }, { s: "planned" }, { s: "planned" }, { s: "studying" }],
-  },
-  {
-    feature: "Enregistrement et captures",
-    cells: [{ s: "planned" }, { s: "planned" }, { s: "planned" }, { s: "planned" }],
-  },
+  { feature: "Sans câble (Wi-Fi)", cells: [{ s: "available" }, { s: "available", note: "Débogage sans fil, Android 11 et plus récent." }] },
+  { feature: "Par câble USB", cells: [{ s: "studying" }, { s: "available" }] },
+  { feature: "Application à installer sur le téléphone", cells: [{ s: "available", note: "Aucune : tout est intégré à iOS." }, { s: "available", note: "Aucune." }] },
 ];
 
 export const steps = [
   {
-    title: "Installez MansoMirror",
-    body: "Sur l'ordinateur et sur le téléphone. Aucun compte n'est nécessaire pour un usage sur votre réseau local.",
+    title: "Installez MansoMirror sur votre PC",
+    body: "Windows, macOS ou Linux. Rien à installer sur le téléphone, aucun compte à créer.",
   },
   {
-    title: "Connectez vos appareils",
-    body: "Scannez le QR code affiché par l'ordinateur, saisissez le code à 6 chiffres, ou branchez le câble USB.",
+    title: "Connectez le téléphone",
+    body: "iPhone : Centre de contrôle → « Recopie de l'écran » → votre PC, puis le code affiché. Android : branchez le câble USB, ou passez en Wi-Fi.",
   },
   {
-    title: "Lancez la session",
-    body: "Acceptez la demande sur l'appareil partagé. L'écran apparaît, et un seul bouton suffit pour tout couper.",
+    title: "Profitez-en en grand",
+    body: "L'écran du téléphone s'affiche dans MansoMirror, avec le son. Un bouton suffit pour tout couper.",
   },
 ];
 
 export const faq = [
   {
     q: "Qu'est-ce que MansoMirror ?",
-    a: "Un ensemble d'applications pour afficher et contrôler vos appareils les uns depuis les autres : téléphone sur ordinateur, ordinateur sur téléphone, en Wi-Fi ou en USB. Le projet est en cours de développement : l'application pour ordinateurs (Windows, macOS, Linux) est en bêta et permet de partager l'écran d'un ordinateur avec un autre ; l'application mobile est à venir.",
+    a: "Une application pour ordinateur (Windows, macOS, Linux) qui affiche l'écran de votre iPhone, iPad ou téléphone Android en grand sur le PC, avec le son et en bonne qualité. Elle est en bêta.",
   },
   {
-    q: "Comment connecter mon téléphone ?",
-    a: "Ouvrez MansoMirror sur les deux appareils, puis scannez le QR code affiché par l'ordinateur ou saisissez son code à 6 chiffres. Le code expire au bout de deux minutes et ne fonctionne qu'une fois.",
+    q: "Faut-il installer quelque chose sur le téléphone ?",
+    a: "Non. L'iPhone utilise « Recopie de l'écran », intégrée à iOS. Android utilise le débogage USB (ou sans fil), à activer une seule fois dans les options pour les développeurs.",
   },
   {
-    q: "Puis-je utiliser une connexion USB ?",
-    a: "Oui pour Android : la connexion USB est prévue dès la première version et permet aussi le contrôle à distance. Pour iPhone et iPad, l'USB est à l'étude ; la connexion se fera en Wi-Fi.",
+    q: "Comment connecter mon iPhone ?",
+    a: "Mettez l'iPhone et le PC sur le même Wi-Fi. Dans MansoMirror, activez la réception AirPlay. Sur l'iPhone, ouvrez le Centre de contrôle, touchez « Recopie de l'écran », choisissez votre PC et saisissez le code à 4 chiffres affiché.",
+  },
+  {
+    q: "Comment connecter mon téléphone Android ?",
+    a: "Une seule fois : Paramètres → À propos → touchez 7 fois « Numéro de build », puis activez « Débogage USB » dans les options pour les développeurs. Branchez le câble, acceptez sur le téléphone : il apparaît dans MansoMirror.",
+  },
+  {
+    q: "Y a-t-il le son ?",
+    a: "Oui pour l'iPhone et l'iPad : le son sort de l'ordinateur. Pour Android, le son arrive dans une prochaine version (Android 11 et plus récent).",
+  },
+  {
+    q: "Puis-je contrôler le téléphone depuis le PC ?",
+    a: "Oui pour Android : souris et clavier. Non pour l'iPhone : Apple ne permet à aucune application de piloter un iPhone.",
   },
   {
     q: "Le logiciel fonctionne-t-il sans Internet ?",
-    a: "Oui. Sur un même réseau Wi-Fi ou par câble USB, les appareils communiquent directement. Internet n'est utile que pour se connecter à un appareil situé sur un autre réseau.",
+    a: "Oui. Le téléphone et le PC communiquent directement, sur votre Wi-Fi ou par câble. Rien ne passe par nos serveurs.",
   },
   {
-    q: "Quels appareils sont compatibles ?",
-    a: "Windows 10 (1903) et plus récent, macOS 12.3 et plus récent, Android 10 et plus récent, iOS et iPadOS 15 et plus récent. Ces versions minimales seront confirmées par des tests sur appareils réels avant la publication.",
-  },
-  {
-    q: "Le contrôle à distance est-il disponible ?",
-    a: "Il est prévu pour Windows, macOS et Android (via USB). Il ne sera pas possible de contrôler un iPhone ou un iPad : Apple ne permet à aucune application de le faire.",
-  },
-  {
-    q: "Mes données sont-elles sécurisées ?",
-    a: "Le flux est chiffré de bout en bout (WebRTC, DTLS-SRTP) et va directement d'un appareil à l'autre. Aucune session ne démarre sans votre accord sur l'appareil partagé, et rien n'est enregistré sans votre demande.",
+    q: "Mes données sont-elles en sécurité ?",
+    a: "L'image ne quitte pas votre réseau. Une connexion iPhone exige le code affiché par MansoMirror ; Android exige votre accord sur le téléphone. Rien n'est enregistré sans votre demande, et « Tout couper » arrête tout.",
   },
   {
     q: "Comment contacter le support ?",
-    a: "Pendant le développement, posez vos questions et signalez les problèmes sur la page GitHub du projet.",
+    a: "Posez vos questions et signalez les problèmes sur la page GitHub du projet.",
   },
 ];

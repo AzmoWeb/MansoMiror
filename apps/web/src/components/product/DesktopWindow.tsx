@@ -49,7 +49,7 @@ function Region({ id, active, className, children }: { id: FeatureId | FeatureId
 const icon = {
   camera: "M4 8h3l2-2h6l2 2h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7",
   full: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
-  swap: "M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7",
+  sound: "M4 9h4l5-4v14l-5-4H4zM16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12",
 };
 
 function ToolIcon({ d, label }: { d: string; label: string }) {
@@ -93,23 +93,19 @@ export function DesktopWindow({
       <div className="flex">
         {/* Sidebar */}
         {!compact && (
-          <Region id="multi" active={highlight} className="hidden w-40 shrink-0 border-r border-line p-3 sm:block">
-            <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-subtle">Appareils</p>
+          <Region id={["iphone", "android"]} active={highlight} className="hidden w-40 shrink-0 border-r border-line p-3 sm:block">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-subtle">Téléphones</p>
             <div className="flex items-center gap-2 rounded-md bg-accent-soft px-2 py-1.5">
               <span className="live-dot size-1.5 rounded-full bg-live" />
-              <span className="truncate font-medium">Téléphone</span>
+              <span className="truncate font-medium">Pixel · USB</span>
             </div>
             <div className="mt-1 flex items-center gap-2 px-2 py-1.5 text-muted">
-              <span className="size-1.5 rounded-full bg-line-strong" />
-              <span className="truncate">Tablette</span>
+              <span className="size-1.5 rounded-full bg-ok-ink" />
+              <span className="truncate">Galaxy · Wi-Fi</span>
             </div>
-            <div className="mt-1 flex items-center gap-2 px-2 py-1.5 text-muted">
-              <span className="size-1.5 rounded-full bg-line-strong" />
-              <span className="truncate">PC du bureau</span>
-            </div>
-            <p className="mb-2 mt-5 font-mono text-[10px] uppercase tracking-wider text-subtle">Associer</p>
+            <p className="mb-2 mt-5 font-mono text-[10px] uppercase tracking-wider text-subtle">iPhone (AirPlay)</p>
             <div className="rounded-md border border-dashed border-line-strong px-2 py-1.5 text-center font-mono tracking-[0.2em] text-muted">
-              482 913
+              4821
             </div>
           </Region>
         )}
@@ -117,15 +113,17 @@ export function DesktopWindow({
         <div className="min-w-0 flex-1">
           {/* Toolbar */}
           <div className="flex h-11 items-center gap-1 border-b border-line px-2">
-            <Region id={["wifi", "usb"]} active={highlight}>
+            <Region id={["android", "iphone"]} active={highlight}>
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-2.5 py-0.5 text-xs">
                 <span className={`size-1.5 rounded-full ${settings.transport === "usb" ? "bg-warn-ink" : "bg-ok-ink"}`} />
                 {settings.transport === "usb" ? "USB" : "Wi-Fi"}
               </span>
             </Region>
-            <span className="ml-2 hidden min-w-0 truncate font-mono text-[11px] text-subtle md:inline" title="Estimation">
-              {settings.resolution} · {settings.fps} i/s · ~{mbps} Mb/s · ~{latency} ms
-            </span>
+            <Region id="quality" active={highlight} className="ml-2 hidden min-w-0 md:block">
+              <span className="block truncate font-mono text-[11px] text-subtle" title="Estimation">
+                {settings.resolution} · {settings.fps} i/s · ~{mbps} Mb/s · ~{latency} ms
+              </span>
+            </Region>
             <div className="ml-auto flex shrink-0 items-center gap-0.5">
               <Region id="screenshot" active={highlight}>
                 <ToolIcon d={icon.camera} label="Capture d'écran" />
@@ -135,8 +133,8 @@ export function DesktopWindow({
                   <span className={`size-3 rounded-full ${recording ? "live-dot bg-live" : "border-2 border-live"}`} />
                 </span>
               </Region>
-              <Region id="bidirectional" active={highlight}>
-                <ToolIcon d={icon.swap} label="Inverser le sens" />
+              <Region id="sound" active={highlight}>
+                <ToolIcon d={icon.sound} label="Son" />
               </Region>
               <ToolIcon d={icon.full} label="Plein écran" />
               <span className="ml-1 hidden whitespace-nowrap rounded-sm bg-live px-2 py-1 text-[11px] font-semibold text-white sm:inline">Couper</span>

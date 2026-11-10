@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { latestRelease, latestFiles, isValidRelease, formatSize, compareSemver, releases, type Release } from "../../src/content/releases.ts";
+import { latestRelease, latestFiles, isValidRelease, formatSize, compareSemver, releases, platforms, type Release } from "../../src/content/releases.ts";
 
 const base: Release = {
   platform: "windows",
@@ -16,9 +16,8 @@ test("every published entry is valid (https URL, real checksum, size)", () => {
   for (const r of releases) assert.ok(isValidRelease(r), `${r.platform} ${r.format}`);
 });
 
-test("mobile apps are not published yet", () => {
-  assert.equal(latestRelease("android"), null);
-  assert.equal(latestRelease("ios"), null);
+test("downloads are for computers only (nothing to install on the phone)", () => {
+  assert.deepEqual(platforms.map((p) => p.id), ["windows", "macos", "linux"]);
 });
 
 test("latestRelease picks the highest semver and ignores other platforms", () => {

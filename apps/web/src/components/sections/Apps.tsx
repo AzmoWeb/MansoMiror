@@ -2,22 +2,22 @@ import { Reveal } from "../Reveal";
 
 const apps = [
   {
-    name: "MansoMirror Desktop",
+    name: "MansoMirror pour ordinateur",
     platforms: "Windows · macOS · Linux",
-    body: "Le centre de contrôle : il trouve vos appareils, affiche leurs écrans et enregistre les sessions. La bêta partage l'écran entre deux ordinateurs du même réseau.",
+    body: "Affiche l'écran du téléphone en grand, avec le son. Captures, enregistrement, plein écran, et contrôle d'Android à la souris.",
     status: "Bêta",
   },
   {
-    name: "MansoMirror Mobile",
-    platforms: "Android · iOS · iPadOS",
-    body: "Partagez l'écran de votre téléphone ou affichez celui de votre ordinateur. Appairage par QR code ou code à 6 chiffres.",
-    status: "Phases 4 et 5",
+    name: "iPhone et iPad",
+    platforms: "iOS · iPadOS",
+    body: "Rien à installer : « Recopie de l'écran », dans le Centre de contrôle, suffit. Le code affiché par MansoMirror protège la connexion.",
+    status: "Bêta",
   },
   {
-    name: "Compte MansoMirror",
-    platforms: "Web",
-    body: "Optionnel : retrouvez vos appareils de confiance et connectez-vous à distance, hors de votre réseau local.",
-    status: "Phase 6",
+    name: "Téléphones Android",
+    platforms: "Android 5 et plus récent",
+    body: "Rien à installer : activez une fois le débogage USB, branchez le câble — ou passez en Wi-Fi sur Android 11 et plus récent.",
+    status: "Bêta",
   },
 ];
 
@@ -27,9 +27,9 @@ export function Apps() {
       <div className="container-page grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
         <Reveal>
           <p className="eyebrow">Applications</p>
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-4xl">Un écosystème, une seule logique.</h2>
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-4xl">Une seule application, sur le PC.</h2>
           <p className="mt-4 text-muted">
-            Les mêmes gestes, le même vocabulaire et la même sécurité, que vous soyez sur votre ordinateur ou votre téléphone.
+            Tout se passe sur l'ordinateur. Le téléphone utilise ce qui est déjà intégré à iOS et à Android.
           </p>
         </Reveal>
         <div className="divide-y divide-line border-y border-line">
