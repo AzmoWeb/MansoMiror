@@ -1,3 +1,4 @@
+import { networkInterfaces } from "node:os";
 import { app, BrowserWindow, desktopCapturer, dialog, type DesktopCapturerSource, globalShortcut, ipcMain, protocol, session, shell, type IpcMainInvokeEvent } from "electron";
 import { join, normalize, extname, sep } from "node:path";
 import { readFileSync, writeFileSync, mkdirSync, appendFileSync, statSync } from "node:fs";
@@ -7,6 +8,7 @@ import { ViewerClient, PairingError } from "./viewer.ts";
 import { Discovery, localAddresses } from "./discovery.ts";
 import { Store } from "./store.ts";
 import { AirPlayReceiver, findUxPlay } from "./airplay.ts";
+import { ensureFirewallRule } from "./firewall.ts";
 import { AndroidBridge, findTool, isHostPort, isSerial } from "./android.ts";
 import { AndroidService, findScrcpyServer } from "./android-service.ts";
 import { autoUpdater } from "electron-updater";
@@ -289,6 +291,23 @@ function registerIpc() {
   handle(IPC.airplayStart, async () => {
     logLine("airplay start requested");
     try {
+      const bin = airplay.binary;
+      if (bin && process.platform === "win32") {
+        const fw = await ensureFirewallRule(bin, app.getPath("userData"), { log: logLine }).catch((e) => {
+          logLine(`firewall: ${(e as Error).message}`);
+          return "failed" as const;
+        });
+        logLine(`firewall: ${fw}`);
+        airplay.notice =
+          fw === "refused"
+            ? "Le pare-feu Windows n'a pas été autorisé : l'iPhone risque de ne pas voir ce PC. Arrêtez puis réactivez la réception et acceptez la demande de Windows."
+            : fw === "failed"
+              ? "Impossible d'autoriser MansoMirror dans le pare-feu Windows : l'iPhone risque de ne pas voir ce PC."
+              : undefined;
+      }
+      for (const [name, list] of Object.entries(networkInterfaces())) {
+        for (const a of list ?? []) if (a.family === "IPv4" && !a.internal) logLine(`network: ${name} ${a.address}`);
+      }
       return await airplay.start(store.settings.deviceName);
     } catch (e) {
       logLine(`airplay start failed: ${(e as Error).message}`);
