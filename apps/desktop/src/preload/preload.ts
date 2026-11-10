@@ -39,6 +39,7 @@ const api: MansoApi = {
   airplayState: (recheck) => invoke(IPC.airplayState, recheck === true),
   airplayStart: () => invoke(IPC.airplayStart),
   airplayStop: () => invoke(IPC.airplayStop),
+  openLogs: () => invoke(IPC.openLogs),
   onAirPlay: (cb) => listen(IPC.airplayEvent, cb),
   onAirPlayVideo: (cb) => listen(IPC.airplayVideo, cb),
   androidStatus: () => invoke(IPC.androidStatus),

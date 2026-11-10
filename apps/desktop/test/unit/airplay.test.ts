@@ -8,7 +8,14 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Bonjour, type Service } from "bonjour-service";
 import { mkdirSync } from "node:fs";
-import { AirPlayReceiver, airplayArgs, findUxPlay, runtimeEnv } from "../../src/main/airplay.ts";
+import { AirPlayReceiver, airplayArgs, airplayName, findUxPlay, runtimeEnv } from "../../src/main/airplay.ts";
+
+test("AirPlay name is plain ASCII (UxPlay on Windows quits on anything else)", () => {
+  assert.equal(airplayName("DESKTOP-TST72EU"), "DESKTOP-TST72EU - MansoMirror");
+  assert.equal(airplayName("PC de Léa · salon"), "PC de Lea salon - MansoMirror");
+  assert.equal(airplayName("📱📱"), "PC - MansoMirror");
+  for (const n of ["Ordinateur à Noël", "Ünïcödé", "日本語"]) assert.match(airplayName(n), /^[\x20-\x7e]+$/);
+});
 
 test("arguments: exact name, mandatory 4-digit code, stale session reset", () => {
   const a = airplayArgs("PC-Salon · MansoMirror", "0427");
@@ -43,6 +50,10 @@ test("shipped runtime: found under resources/uxplay/bin and isolated to its own 
   assert.equal(env.GST_PLUGIN_SYSTEM_PATH, env.GST_PLUGIN_PATH);
   assert.equal(env.GST_REGISTRY, join("/data", "gst-registry.bin"));
   assert.ok(env.PATH!.startsWith(dirname(bin)));
+  // Windows: the existing "Path" key is updated, no second PATH key is added.
+  const win = runtimeEnv(bin, { Path: "C:\\Windows\\System32" });
+  assert.equal(Object.keys(win).filter((k) => k.toUpperCase() === "PATH").length, 1);
+  assert.ok(win.Path!.startsWith(dirname(bin)) && win.Path!.endsWith("System32"));
   // A system-wide UxPlay (no bundled plugins) keeps the normal environment.
   assert.deepEqual(runtimeEnv("/usr/bin/uxplay", { PATH: "/usr/bin" }), { PATH: "/usr/bin" });
 });
@@ -90,7 +101,7 @@ test("real UxPlay: announced as an AirPlay receiver under our name, then stopped
       });
     });
     assert.ok(found, `receiver not announced on mDNS. UxPlay said:\n${logs.join("\n")}`);
-    assert.equal(found.name, `${name} · MansoMirror`);
+    assert.equal(found.name, `${name} - MansoMirror`);
     // iOS uses these TXT records to list the device as a screen-mirroring target.
     assert.ok(found.txt && typeof found.txt === "object");
   } finally {
@@ -98,4 +109,17 @@ test("real UxPlay: announced as an AirPlay receiver under our name, then stopped
     await r.stop();
   }
   assert.equal(r.current.status, "stopped");
+});
+
+test("a receiver that dies right after starting reports an error with its last messages", { skip: process.platform === "win32" }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), "mm-bad-"));
+  const bin = join(dir, "uxplay");
+  writeFileSync(bin, "#!/bin/sh\necho \"Required gstreamer plugin 'app' not found\" >&2\nexit 0\n");
+  chmodSync(bin, 0o755);
+  const r = new AirPlayReceiver(bin);
+  const done = new Promise<void>((res) => r.on("state", (s) => s.status === "error" && res()));
+  await r.start("PC");
+  await done;
+  assert.equal(r.current.status, "error");
+  assert.match((r.current as { message: string }).message, /plugin 'app' not found/);
 });

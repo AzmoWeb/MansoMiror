@@ -70,6 +70,21 @@ export function airplayArgs(name: string, pin: string, platform: NodeJS.Platform
   ];
 }
 
+/**
+ * Name shown in the iPhone's "Recopie de l'écran" list. ASCII only: on Windows,
+ * UxPlay reads its arguments in the ANSI code page and quits (exit code 0) on
+ * any other character — "·", accents, emoji…
+ */
+export function airplayName(deviceName: string): string {
+  const ascii = cleanName(deviceName)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // é → e
+    .replace(/[^\x20-\x7e]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `${ascii || "PC"} - MansoMirror`.slice(0, 60);
+}
+
 /** UxPlay >= 1.74 can hand the stream to us (-vrtp); older builds only show their own window. */
 export function supportsInApp(bin: string, env: NodeJS.ProcessEnv = process.env): boolean {
   try {
@@ -90,9 +105,13 @@ export function runtimeEnv(bin: string, base: NodeJS.ProcessEnv = process.env, r
   const plugins = join(root, "lib", "gstreamer-1.0");
   if (!existsSync(plugins)) return base;
   const scanner = join(root, "libexec", "gstreamer-1.0", process.platform === "win32" ? "gst-plugin-scanner.exe" : "gst-plugin-scanner");
+  // Windows names it "Path" (case-insensitive); update the existing key instead of adding a second one.
+  const pathKey = Object.keys(base).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
+  const env: NodeJS.ProcessEnv = { ...base };
+  for (const k of Object.keys(env)) if (k.toUpperCase() === "PATH" && k !== pathKey) delete env[k];
   return {
-    ...base,
-    PATH: `${dirname(bin)}${delimiter}${base.PATH ?? ""}`,
+    ...env,
+    [pathKey]: `${dirname(bin)}${delimiter}${base[pathKey] ?? ""}`,
     GST_PLUGIN_PATH: plugins,
     GST_PLUGIN_SYSTEM_PATH: plugins,
     ...(existsSync(scanner) ? { GST_PLUGIN_SCANNER: scanner } : {}),
@@ -138,7 +157,7 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
   async start(deviceName: string): Promise<AirPlayState> {
     if (!this.bin) return this.state;
     if (this.proc) return this.state;
-    const name = `${cleanName(deviceName)} · MansoMirror`.slice(0, 60);
+    const name = airplayName(deviceName);
     const pin = String(randomInt(0, 10_000)).padStart(4, "0");
     const env = runtimeEnv(this.bin, process.env, this.registryDir);
     this.inApp ??= supportsInApp(this.bin, env);
@@ -156,8 +175,15 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
       env,
     });
     this.proc = proc;
+    const recent: string[] = [];
+    const startedAt = Date.now();
     const onData = (buf: Buffer) => {
-      for (const line of buf.toString().split(/\r?\n/)) if (line.trim()) this.emit("log", line.trim());
+      for (const line of buf.toString().split(/\r?\n/)) {
+        if (!line.trim()) continue;
+        recent.push(line.trim());
+        if (recent.length > 12) recent.shift();
+        this.emit("log", line.trim());
+      }
     };
     proc.stdout?.on("data", onData);
     proc.stderr?.on("data", onData);
@@ -170,7 +196,11 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
       if (this.proc !== proc) return;
       this.proc = null;
       void this.video.close();
-      this.set(signal || code === 0 ? { status: "stopped" } : { status: "error", message: `UxPlay s'est arrêté (code ${code}).` });
+      // Stopped by us (signal) → "stopped". Anything else, or an exit right after start, is an error worth showing.
+      const early = Date.now() - startedAt < 5000;
+      if (signal && !early) return this.set({ status: "stopped" });
+      const tail = recent.filter((l) => /error|erreur|not found|fail|unable|cannot|invalid/i.test(l)).slice(-3).join(" · ") || recent.slice(-2).join(" · ");
+      this.set({ status: "error", message: `Le récepteur AirPlay s'est arrêté (code ${code ?? signal}).${tail ? ` ${tail}` : ""}` });
     });
     this.set({ status: "running", name, pin, since: Date.now(), inApp: !!this.inApp, streaming: false, videoPort });
     return this.state;

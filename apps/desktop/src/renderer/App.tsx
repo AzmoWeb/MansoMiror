@@ -416,6 +416,7 @@ const installHelp: Record<string, string> = {
 /** iPhone / iPad → this computer, via the system "Recopie de l'écran" (AirPlay). */
 function AirPlayPanel() {
   const [st, setSt] = useState<AirPlayState | null>(null);
+  const [starting, setStarting] = useState(false);
   const [platform, setPlatform] = useState("");
   useEffect(() => {
     void mm.airplayState().then(setSt);
@@ -467,9 +468,29 @@ function AirPlayPanel() {
               {st.message}
             </p>
           )}
-          <button className="btn primary" onClick={async () => setSt(await mm.airplayStart())}>
-            Activer la réception AirPlay
-          </button>
+          <div className="row">
+            <button
+              className="btn primary"
+              disabled={starting}
+              onClick={async () => {
+                setStarting(true);
+                try {
+                  setSt(await mm.airplayStart());
+                } catch (e) {
+                  setSt({ status: "error", message: `Démarrage impossible : ${(e as Error).message}` });
+                } finally {
+                  setStarting(false);
+                }
+              }}
+            >
+              {starting ? "Démarrage…" : "Activer la réception AirPlay"}
+            </button>
+            {st.status === "error" && (
+              <button className="btn ghost" onClick={() => void mm.openLogs()}>
+                Ouvrir les journaux
+              </button>
+            )}
+          </div>
         </>
       )}
 

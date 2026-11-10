@@ -77,6 +77,10 @@ jobs:
           if ($p.HasExited) { throw "uxplay.exe exited early (code $($p.ExitCode))" }
           Stop-Process -Id $p.Id -Force
           if ($log -match "not found") { throw "A required GStreamer plugin is missing" }
+      - name: Check the AirPlay receiver with the app's own code (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: node apps/desktop/scripts/check-airplay.ts "$PWD/apps/desktop/vendor/uxplay/bin/uxplay.exe"
       - name: Build installers
         working-directory: apps/desktop
         env:
