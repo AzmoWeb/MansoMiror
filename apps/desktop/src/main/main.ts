@@ -109,6 +109,7 @@ const updater = new Updater(
 updater.on("state", (st) => win?.webContents.send(IPC.updateEvent, st));
 const androidHistory = new Map<string, string>();
 android.on("event", (e) => {
+  logLine(e.type === "meta" ? `android meta ${e.meta.width}x${e.meta.height}` : `android ended: ${e.reason}`);
   if (e.type === "meta") {
     const id = randomHex(8);
     androidHistory.set(e.serial, id);
@@ -303,6 +304,7 @@ function registerIpc() {
   });
   handle(IPC.androidStart, async (serial, control) => {
     if (!isSerial(serial)) return { ok: false, message: "Appareil invalide." };
+    logLine("android start");
     try {
       await android.start(serial, {
         maxSize: store.settings.maxHeight,
@@ -310,8 +312,10 @@ function registerIpc() {
         bitRate: store.settings.maxHeight && store.settings.maxHeight <= 720 ? 4_000_000 : 8_000_000,
         control: control !== false,
       });
+      logLine("android started");
       return { ok: true };
     } catch (e) {
+      logLine(`android start failed: ${(e as Error).message}`);
       return { ok: false, message: (e as Error).message };
     }
   });

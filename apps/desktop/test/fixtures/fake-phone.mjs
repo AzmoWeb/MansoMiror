@@ -67,9 +67,21 @@ export function startFakePhone({ name = "Téléphone de test", width = 360, heig
   const sockets = [];
   let timer = null;
   let i = 0;
+  let connections = 0;
   const server = createServer((sock) => {
+    connections++;
+    // Like scrcpy-server, each session starts over: forget closed sockets.
+    for (let k = sockets.length - 1; k >= 0; k--) if (sockets[k].destroyed) sockets.splice(k, 1);
+    if (sockets.length >= 2) {
+      clearInterval(timer);
+      for (const s of sockets) s.destroy();
+      sockets.length = 0;
+    }
     sockets.push(sock);
     sock.on("error", () => {});
+    sock.on("close", () => {
+      if (sockets[0] === sock) clearInterval(timer);
+    });
     if (sockets.length === 1) {
       sock.write(Buffer.from([0])); // "ready" dummy byte
     } else if (sockets.length === 2) {
@@ -102,6 +114,7 @@ export function startFakePhone({ name = "Téléphone de test", width = 360, heig
       resolve({
         port: server.address().port,
         control,
+        connections: () => connections,
         close: () =>
           new Promise((r) => {
             clearInterval(timer);

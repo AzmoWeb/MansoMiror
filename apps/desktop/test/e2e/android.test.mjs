@@ -21,11 +21,17 @@ before(async () => {
   const args = process.getuid?.() === 0 ? [appDir, "--no-sandbox"] : [appDir];
   app = await electron.launch({ args, env: { ...process.env, MM_USER_DATA: dir, MM_ANDROID_FAKE_PORT: String(phone.port) }, timeout: 30000 });
   page = await app.firstWindow();
-  if (process.env.MM_DEBUG) page.on("console", (m) => console.error(`[app] ${m.text()}`));
+  if (process.env.MM_DEBUG) page.on("console", (m) => console.error(`[app] ${m.type()} ${m.text()}`));
   await page.waitForSelector(".shell");
 });
 
 after(async () => {
+  if (process.env.MM_DEBUG) {
+    try {
+      console.error("MAIN LOG\n" + (await import("node:fs")).readFileSync(join(dir, "logs", "main.log"), "utf8"));
+    } catch {}
+    console.error("fake phone connections:", phone?.connections?.());
+  }
   await app?.close();
   await phone?.close();
   if (dir) rmSync(dir, { recursive: true, force: true });
