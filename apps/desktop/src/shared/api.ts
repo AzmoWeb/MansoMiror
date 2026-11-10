@@ -1,7 +1,18 @@
 import type { Settings, HistoryEntry } from "../main/store.ts";
 import type { DiscoveredDevice } from "../main/discovery.ts";
+import type { AirPlayState } from "../main/airplay.ts";
+import type { AndroidDevice } from "../main/android.ts";
+import type { AndroidEvent, AndroidInput } from "../main/android-service.ts";
 
-export type { Settings, HistoryEntry, DiscoveredDevice };
+export type { Settings, HistoryEntry, DiscoveredDevice, AirPlayState, AndroidDevice, AndroidEvent, AndroidInput };
+
+export interface AndroidVideoPacket {
+  serial: string;
+  config: boolean;
+  key: boolean;
+  pts: number;
+  data: Uint8Array;
+}
 
 export interface AppInfo {
   version: string;
@@ -64,6 +75,23 @@ export interface MansoApi {
   onKilled(cb: () => void): () => void;
 
   saveFile(kind: "png" | "webm", data: ArrayBuffer): Promise<string | null>;
+
+  /** AirPlay receiver (iPhone / iPad "Recopie de l'écran"). recheck = look for UxPlay again. */
+  airplayState(recheck?: boolean): Promise<AirPlayState>;
+  airplayStart(): Promise<AirPlayState>;
+  airplayStop(): Promise<void>;
+  onAirPlay(cb: (s: AirPlayState) => void): () => void;
+
+  /** Android: show and control a phone inside MansoMirror. */
+  androidStatus(): Promise<{ adb: boolean; server: boolean; available: boolean }>;
+  androidDevices(): Promise<AndroidDevice[]>;
+  androidPair(hostPort: string, code: string): Promise<{ ok: boolean; message?: string }>;
+  androidConnect(hostPort: string): Promise<{ ok: boolean; message?: string }>;
+  androidStart(serial: string, control: boolean): Promise<{ ok: boolean; message?: string }>;
+  androidInput(serial: string, input: AndroidInput): Promise<boolean>;
+  androidStop(serial: string): Promise<void>;
+  onAndroidEvent(cb: (e: AndroidEvent) => void): () => void;
+  onAndroidVideo(cb: (p: AndroidVideoPacket) => void): () => void;
 }
 
 export const IPC = {
@@ -91,4 +119,17 @@ export const IPC = {
   killAll: "mm:kill",
   killed: "mm:killed",
   saveFile: "mm:save",
+  airplayState: "mm:airplay:state",
+  airplayStart: "mm:airplay:start",
+  airplayStop: "mm:airplay:stop",
+  airplayEvent: "mm:airplay:event",
+  androidStatus: "mm:android:status",
+  androidDevices: "mm:android:devices",
+  androidPair: "mm:android:pair",
+  androidConnect: "mm:android:connect",
+  androidStart: "mm:android:start",
+  androidInput: "mm:android:input",
+  androidStop: "mm:android:stop",
+  androidEvent: "mm:android:event",
+  androidVideo: "mm:android:video",
 } as const;

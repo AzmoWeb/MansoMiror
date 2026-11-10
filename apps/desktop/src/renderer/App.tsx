@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AppInfo, CaptureSource, DiscoveredDevice, HistoryEntry, HostEvent, MansoApi, Settings } from "../shared/api.ts";
+import type { AirPlayState, AppInfo, CaptureSource, DiscoveredDevice, HistoryEntry, HostEvent, MansoApi, Settings } from "../shared/api.ts";
 import { errorText, type ErrorCode } from "../shared/protocol.ts";
 import { bitrateFor, captureScreen, createHost, createViewer, watchStats, type LiveStats } from "./webrtc.ts";
 import { Icon, LogoMark, Modal, Svg, Toasts, useCountdown, useElapsed, type Toast } from "./ui.tsx";
+import { AndroidPanel, AndroidScreen } from "./android-ui.tsx";
+import type { AndroidDevice } from "../shared/api.ts";
 
 declare global {
   interface Window {
@@ -202,6 +204,7 @@ export function App() {
         setPeerRecording(false);
         setHost({ s: "idle" });
         setViewer({ s: "idle" });
+        setAndroidDevice(null);
         toast("Toutes les connexions ont été coupées.", "ok");
       }),
     [toast, stopHostMedia],
@@ -229,7 +232,31 @@ export function App() {
     setViewer({ s: "watching", hostName: res.hostName, stream: await stream, since: Date.now() });
   }
 
-  const active = host.s === "waiting" || host.s === "sharing" || viewer.s === "watching";
+  const [androidDevice, setAndroidDevice] = useState<AndroidDevice | null>(null);
+  const [airplayOn, setAirplayOn] = useState(false);
+  useEffect(() => {
+    void mm.airplayState().then((st) => setAirplayOn(st.status === "running"));
+    return mm.onAirPlay((st) => setAirplayOn(st.status === "running"));
+  }, []);
+
+  const active = host.s === "waiting" || host.s === "sharing" || viewer.s === "watching" || airplayOn;
+
+  if (androidDevice) {
+    return (
+      <>
+        <AndroidScreen
+          device={androidDevice}
+          toast={toast}
+          onKill={() => void mm.killAll()}
+          onClose={(reason) => {
+            setAndroidDevice(null);
+            if (reason) toast(reason);
+          }}
+        />
+        <Toasts items={toasts} />
+      </>
+    );
+  }
 
   if (viewer.s === "watching") {
     return (
@@ -301,6 +328,7 @@ export function App() {
             onNewPin={() => void newPin()}
             onStopShare={() => void stopSharing()}
             onConnectTo={(target) => setViewer({ s: "pin", target })}
+            onOpenAndroid={setAndroidDevice}
             settings={settings}
           />
         )}
@@ -330,6 +358,7 @@ function DevicesView(props: {
   onNewPin: () => void;
   onStopShare: () => void;
   onConnectTo: (t: { name: string; host: string; port: number }) => void;
+  onOpenAndroid: (d: AndroidDevice) => void;
 }) {
   const { host } = props;
   return (
@@ -360,7 +389,104 @@ function DevicesView(props: {
         <Discovered onPick={props.onConnectTo} />
         <ManualConnect defaultPort={props.settings.port} onConnect={props.onConnectTo} />
       </section>
+
+      <AndroidPanel onOpen={props.onOpenAndroid} />
+      <AirPlayPanel />
     </div>
+  );
+}
+
+const installHelp: Record<string, string> = {
+  linux: "sudo apt install uxplay gstreamer1.0-plugins-bad gstreamer1.0-libav",
+  darwin: "brew install uxplay",
+};
+
+/** iPhone / iPad → this computer, via the system "Recopie de l'écran" (AirPlay). */
+function AirPlayPanel() {
+  const [st, setSt] = useState<AirPlayState | null>(null);
+  const [platform, setPlatform] = useState("");
+  useEffect(() => {
+    void mm.airplayState().then(setSt);
+    void mm.info().then((i) => setPlatform(i.platform));
+    return mm.onAirPlay(setSt);
+  }, []);
+  if (!st) return null;
+
+  return (
+    <section className="panel" aria-labelledby="airplay-title" data-testid="airplay">
+      <div className="panel-head">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="7" y="2" width="10" height="20" rx="2.5" />
+          <path d="M11 18h2" />
+        </svg>
+        <h2 id="airplay-title">Recevoir un iPhone ou un iPad</h2>
+        <span className="tag">AirPlay</span>
+      </div>
+
+      {st.status === "unavailable" && (
+        <>
+          <p className="muted">
+            Pour afficher l'écran d'un iPhone ici, MansoMirror utilise le récepteur AirPlay open source UxPlay, qui n'est pas encore installé
+            sur cet ordinateur.
+          </p>
+          {installHelp[platform] ? (
+            <p>
+              Installez-le avec : <code className="mono">{installHelp[platform]}</code>
+            </p>
+          ) : (
+            <p className="muted">
+              Sous Windows, il sera intégré à l'installeur dans une prochaine version. Il nécessite aussi le service Bonjour d'Apple.
+            </p>
+          )}
+          <button className="btn ghost" onClick={async () => setSt(await mm.airplayState(true))}>
+            <Svg d={Icon.refresh} size={16} /> Vérifier à nouveau
+          </button>
+        </>
+      )}
+
+      {(st.status === "stopped" || st.status === "error") && (
+        <>
+          <p className="muted">
+            Activez la réception, puis sur l'iPhone ouvrez le Centre de contrôle et touchez « Recopie de l'écran » : cet ordinateur apparaîtra
+            dans la liste. Un code affiché ici sera demandé.
+          </p>
+          {st.status === "error" && (
+            <p className="error" role="alert">
+              {st.message}
+            </p>
+          )}
+          <button className="btn primary" onClick={async () => setSt(await mm.airplayStart())}>
+            Activer la réception AirPlay
+          </button>
+        </>
+      )}
+
+      {st.status === "running" && (
+        <div className="airplay-on">
+          <div>
+            <p className="live">
+              <span className="dot live-dot" /> Visible par les iPhone et iPad du réseau
+            </p>
+            <ol className="steps">
+              <li>Sur l'iPhone, glissez depuis le coin supérieur droit pour ouvrir le Centre de contrôle.</li>
+              <li>
+                Touchez <b>Recopie de l'écran</b>, puis <b>{st.name}</b>.
+              </li>
+              <li>Saisissez le code ci-contre. L'écran s'affiche dans une nouvelle fenêtre.</li>
+            </ol>
+            <button className="btn ghost" onClick={() => void mm.airplayStop()}>
+              Arrêter la réception
+            </button>
+          </div>
+          <div className="airplay-code">
+            <p className="label">Code AirPlay</p>
+            <p className="pin" data-testid="airplay-pin">
+              {st.pin}
+            </p>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -6,6 +6,9 @@ import { HostServer } from "./host.ts";
 import { ViewerClient, PairingError } from "./viewer.ts";
 import { Discovery, localAddresses } from "./discovery.ts";
 import { Store } from "./store.ts";
+import { AirPlayReceiver, findUxPlay } from "./airplay.ts";
+import { AndroidBridge, findTool, isHostPort, isSerial } from "./android.ts";
+import { AndroidService, findScrcpyServer } from "./android-service.ts";
 import { randomHex } from "./pairing.ts";
 import { IPC, type CaptureSource, type HostEvent, type ViewerEvent } from "../shared/api.ts";
 
@@ -61,6 +64,30 @@ let deviceId = "";
 const host = new HostServer(() => store.settings.deviceName);
 const viewer = new ViewerClient();
 const discovery = new Discovery();
+const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
+airplay.on("state", (st) => win?.webContents.send(IPC.airplayEvent, st));
+
+// Test-only fake phone (see test/fixtures/fake-phone.mjs); ignored in packaged builds.
+const fakePhonePort = !app.isPackaged && process.env.MM_ANDROID_FAKE_PORT ? Number(process.env.MM_ANDROID_FAKE_PORT) : null;
+const android = new AndroidService(
+  new AndroidBridge({ adb: findTool("adb", process.env, process.resourcesPath), scrcpy: null }),
+  findScrcpyServer(process.env, process.resourcesPath, join(__dirname, "..")),
+  fakePhonePort,
+);
+const androidHistory = new Map<string, string>();
+android.on("event", (e) => {
+  if (e.type === "meta") {
+    const id = randomHex(8);
+    androidHistory.set(e.serial, id);
+    store.startSession({ id, role: "viewer", peer: e.meta.deviceName || "Android", address: e.serial });
+  } else {
+    const id = androidHistory.get(e.serial);
+    if (id) store.endSession(id, e.reason);
+    androidHistory.delete(e.serial);
+  }
+  win?.webContents.send(IPC.androidEvent, e);
+});
+android.on("packet", (p) => win?.webContents.send(IPC.androidVideo, p));
 let selectedSource: DesktopCapturerSource | null = null;
 /** Sources from the last listing shown to the user; only these can be selected. */
 let listedSources = new Map<string, DesktopCapturerSource>();
@@ -106,7 +133,8 @@ viewer.on("ended", ({ reason }) => {
 
 async function killAll() {
   viewer.disconnect();
-  await host.stop("killed");
+  android.stopAll();
+  await Promise.all([host.stop("killed"), airplay.stop()]);
   discovery.unpublish();
   selectedSource = null;
   win?.webContents.send(IPC.killed);
@@ -204,6 +232,52 @@ function registerIpc() {
   handle(IPC.viewerDisconnect, () => viewer.disconnect());
   handle(IPC.killAll, () => killAll());
 
+  handle(IPC.airplayState, (recheck) => {
+    if (recheck === true) airplay.setBinary(findUxPlay(process.env, process.resourcesPath));
+    return airplay.current;
+  });
+  handle(IPC.airplayStart, () => airplay.start(store.settings.deviceName));
+  handle(IPC.airplayStop, () => airplay.stop());
+
+  handle(IPC.androidStatus, () => android.status());
+  handle(IPC.androidDevices, () => android.devices());
+  handle(IPC.androidPair, async (hostPort, code) => {
+    if (!isHostPort(hostPort) || typeof code !== "string" || !/^\d{6}$/.test(code)) return { ok: false, message: "Adresse ou code invalide." };
+    try {
+      await android.bridge.pair(hostPort, code);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: (e as Error).message };
+    }
+  });
+  handle(IPC.androidConnect, async (hostPort) => {
+    if (!isHostPort(hostPort)) return { ok: false, message: "Adresse invalide." };
+    try {
+      await android.bridge.connect(hostPort);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: (e as Error).message };
+    }
+  });
+  handle(IPC.androidStart, async (serial, control) => {
+    if (!isSerial(serial)) return { ok: false, message: "Appareil invalide." };
+    try {
+      await android.start(serial, {
+        maxSize: store.settings.maxHeight,
+        maxFps: store.settings.fps,
+        bitRate: store.settings.maxHeight && store.settings.maxHeight <= 720 ? 4_000_000 : 8_000_000,
+        control: control !== false,
+      });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: (e as Error).message };
+    }
+  });
+  handle(IPC.androidInput, (serial, input) => (isSerial(serial) ? android.input(serial, input) : false));
+  handle(IPC.androidStop, (serial) => {
+    if (isSerial(serial)) android.stop(serial);
+  });
+
   handle(IPC.saveFile, async (kind, data) => {
     if ((kind !== "png" && kind !== "webm") || !(data instanceof ArrayBuffer || ArrayBuffer.isView(data))) throw new Error("invalid argument");
     const buf = data instanceof ArrayBuffer ? Buffer.from(new Uint8Array(data)) : Buffer.from(data as Uint8Array);
@@ -288,4 +362,6 @@ app.on("will-quit", () => {
   viewer.disconnect();
   void host.stop("stopped");
   discovery.destroy();
+  void airplay.stop();
+  android.stopAll();
 });

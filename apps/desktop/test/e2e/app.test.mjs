@@ -48,7 +48,16 @@ test("renderer is isolated: no Node, only the narrow API", { timeout: 60_000 }, 
   }));
   assert.equal(r.require, "undefined");
   assert.equal(r.process, "undefined");
-  assert.ok(r.api.includes("killAll") && r.api.length === 24, `api: ${r.api}`);
+  // Exact allow-list: exposing a new function to the page must be a deliberate change here.
+  assert.deepEqual(r.api, [
+    "airplayStart", "airplayState", "airplayStop",
+    "androidConnect", "androidDevices", "androidInput", "androidPair", "androidStart", "androidStatus", "androidStop",
+    "clearHistory", "discoverStart", "discoverStop", "getSettings", "history",
+    "hostAccept", "hostEndSession", "hostNewPin", "hostRefuse", "hostStart", "hostStop",
+    "info", "killAll", "listSources",
+    "onAirPlay", "onAndroidEvent", "onAndroidVideo", "onDevices", "onHostEvent", "onKilled", "onViewerEvent",
+    "saveFile", "selectSource", "setSettings", "viewerConnect", "viewerDisconnect", "viewerSetRecording",
+  ]);
   assert.equal(r.popup, true);
 });
 
@@ -147,6 +156,22 @@ test("kill switch on A ends the session on both sides", { timeout: 60_000 }, asy
   await pb.waitForSelector(".shell", { timeout: 10000 });
   await pb.getByText("L'autre ordinateur a mis fin au partage.").waitFor();
   assert.equal(await pa.getByTestId("pin").count(), 0);
+});
+
+test("AirPlay receiver: shows a 4-digit code, and the kill switch stops it", { timeout: 60_000 }, async () => {
+  await pa.getByRole("button", { name: "Appareils" }).click();
+  const panel = pa.getByTestId("airplay");
+  await panel.waitFor();
+  if ((await panel.getByRole("button", { name: "Activer la réception AirPlay" }).count()) === 0) {
+    // UxPlay is not installed on this machine: the panel must say so and explain how to install it.
+    assert.match(await panel.innerText(), /UxPlay/);
+    return;
+  }
+  await panel.getByRole("button", { name: "Activer la réception AirPlay" }).click();
+  assert.match(await pa.getByTestId("airplay-pin").innerText({ timeout: 10000 }), /^\d{4}$/);
+  if (SHOTS) await pa.screenshot({ path: `${SHOTS}/airplay.png` });
+  await pa.getByRole("button", { name: "Tout couper" }).first().click();
+  await panel.getByRole("button", { name: "Activer la réception AirPlay" }).waitFor({ timeout: 10000 });
 });
 
 test("the session is recorded in both histories", { timeout: 60_000 }, async () => {

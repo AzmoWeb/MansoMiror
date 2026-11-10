@@ -8,6 +8,13 @@ directories:
 files:
   - dist/**
   - package.json
+# Shipped next to the app (process.resourcesPath). vendor/ is filled by scripts/fetch-scrcpy.mjs.
+extraResources:
+  - from: vendor/scrcpy
+    to: scrcpy
+    filter: ["scrcpy-server"]
+  - from: build/third-party
+    to: third-party
 asar: true
 # Electron fuses: turn off ways to run arbitrary code through the shipped binary.
 electronFuses:
@@ -21,6 +28,10 @@ electronFuses:
 artifactName: "MansoMirror-${version}-${os}-${arch}.${ext}"
 
 win:
+  extraResources:
+    - from: vendor/scrcpy
+      to: scrcpy
+      filter: ["adb.exe", "AdbWinApi.dll", "AdbWinUsbApi.dll"]
   target:
     - target: nsis
       arch: [x64]

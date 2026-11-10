@@ -18,6 +18,42 @@ Application Electron pour **Windows, macOS et Linux** : partage d'écran entre d
 | Paquets Linux AppImage et .deb | ✅ | compilés et lancés (interface vérifiée) |
 | Installeur Windows `.exe` et `.dmg` macOS | ⏳ | compilés par GitHub Actions sur de vrais Windows/Mac ; **pas encore testés sur une machine réelle** |
 
+## Afficher et contrôler un Android (dans la fenêtre MansoMirror)
+
+Panneau « Afficher et contrôler un Android » : le téléphone branché en USB (ou connecté en Wi-Fi, Android 11+) apparaît
+dans la liste ; « Afficher » montre son écran **en grand dans la fenêtre MansoMirror**, et la souris/le clavier le pilotent.
+
+- Le téléphone exécute **scrcpy-server 3.3.1** (Genymobile, Apache-2.0), envoyé par adb au début de la session et
+  supprimé à la fin. Le flux H.264 passe par un tunnel adb local ; il est décodé dans l'application (WebCodecs,
+  accéléré par la carte graphique quand c'est possible) et affiché sur un canevas.
+- Contrôle : clic = toucher, glisser = balayer, molette = défiler, clic droit/Échap = Retour, clic molette = Accueil,
+  clavier = saisie de texte ; barre Android (Retour, Accueil, Récents), volume, marche, capture, mode lecture seule.
+  L'interface n'envoie que des actions décrites, validées par le processus principal (aucun octet brut).
+- Sécurité : Android impose lui-même l'activation du débogage USB/sans fil et l'acceptation de l'ordinateur sur le
+  téléphone. « Tout couper » arrête la session.
+- Composants livrés : scrcpy-server 3.3.1 (toutes plateformes) et adb (Windows), téléchargés à la compilation par
+  `scripts/fetch-scrcpy.mjs` avec empreintes SHA-256 figées. macOS/Linux : adb à installer
+  (`brew install android-platform-tools`, `sudo apt install adb`).
+- Testé : protocole vérifié contre le code source de scrcpy 3.3.1 (messages au bit près), session et interface testées
+  avec un faux téléphone qui parle le même protocole et envoie une vraie vidéo H.264 (décodage, résolution,
+  coordonnées du clic, boutons, saisie, lecture seule). **Pas encore testé avec un vrai téléphone Android.**
+
+## Recevoir un iPhone ou un iPad (AirPlay)
+
+Le panneau « Recevoir un iPhone ou un iPad » transforme l'ordinateur en récepteur **AirPlay** : sur l'iPhone, Centre de
+contrôle → **Recopie de l'écran** → choisir « *nom de l'ordinateur* · MansoMirror » → saisir le code à 4 chiffres affiché.
+
+- Récepteur : [UxPlay](https://github.com/FDH2/UxPlay) (open source, **GPL-3.0**), lancé comme programme séparé
+  (`src/main/airplay.ts`). Il affiche l'écran de l'iPhone dans sa propre fenêtre.
+- Sécurité : code à 4 chiffres tiré au hasard à chaque activation ; la réception s'arrête avec « Tout couper ».
+- Testé : l'ordinateur s'annonce bien sur le réseau comme récepteur AirPlay (`_airplay._tcp`) sous le bon nom
+  (test automatique avec le vrai UxPlay). **Pas encore testé avec un vrai iPhone** (aucun iPhone dans l'environnement de test).
+- Installation actuelle : UxPlay doit être installé à part (Linux : `sudo apt install uxplay gstreamer1.0-plugins-bad
+  gstreamer1.0-libav` ; macOS : `brew install uxplay`). **Windows : intégration à l'installeur à venir** (UxPlay, GStreamer
+  et le service Bonjour d'Apple sont nécessaires).
+- AirPlay est un protocole Apple non documenté publiquement : UxPlay en est une réimplémentation ; une mise à jour d'iOS
+  peut nécessiter une mise à jour d'UxPlay. Distribuer UxPlay avec l'application impose de fournir son code source (GPL-3.0).
+
 ## Ce qu'elle ne fait pas encore
 
 - **Recopier un téléphone** : cela demande l'application mobile (phases 4–5).

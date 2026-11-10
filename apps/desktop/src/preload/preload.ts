@@ -36,6 +36,19 @@ const api: MansoApi = {
   killAll: () => invoke(IPC.killAll),
   onKilled: (cb) => listen(IPC.killed, cb),
   saveFile: (kind, data) => invoke(IPC.saveFile, kind, data),
+  airplayState: (recheck) => invoke(IPC.airplayState, recheck === true),
+  airplayStart: () => invoke(IPC.airplayStart),
+  airplayStop: () => invoke(IPC.airplayStop),
+  onAirPlay: (cb) => listen(IPC.airplayEvent, cb),
+  androidStatus: () => invoke(IPC.androidStatus),
+  androidDevices: () => invoke(IPC.androidDevices),
+  androidPair: (hp, code) => invoke(IPC.androidPair, hp, code),
+  androidConnect: (hp) => invoke(IPC.androidConnect, hp),
+  androidStart: (serial, control) => invoke(IPC.androidStart, serial, control),
+  androidInput: (serial, input) => invoke(IPC.androidInput, serial, input),
+  androidStop: (serial) => invoke(IPC.androidStop, serial),
+  onAndroidEvent: (cb) => listen(IPC.androidEvent, cb),
+  onAndroidVideo: (cb) => listen(IPC.androidVideo, cb),
 };
 
 contextBridge.exposeInMainWorld("mm", api);

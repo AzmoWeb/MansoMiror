@@ -1,7 +1,7 @@
 {
   "name": "@mansomirror/desktop",
   "productName": "MansoMirror",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "MansoMirror Desktop — partage d'écran sécurisé entre ordinateurs sur le réseau local.",
   "author": "Manso",
@@ -28,7 +28,7 @@
     "typecheck": "tsc --noEmit -p .",
     "test": "node --test \"test/unit/**/*.test.ts\"",
     "test:e2e": "node scripts/build.mjs && node --test --test-force-exit --test-concurrency=1 \"test/e2e/**/*.test.mjs\"",
-    "dist": "node scripts/build.mjs && electron-builder --publish never"
+    "dist": "node scripts/fetch-scrcpy.mjs && node scripts/build.mjs && electron-builder --publish never"
   },
   "homepage": "https://github.com/AzmoWeb/MansoMiror",
   "desktopName": "mansomirror.desktop"
