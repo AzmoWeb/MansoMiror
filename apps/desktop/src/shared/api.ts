@@ -81,6 +81,8 @@ export interface MansoApi {
   airplayState(recheck?: boolean): Promise<AirPlayState>;
   airplayStart(): Promise<AirPlayState>;
   airplayStop(): Promise<void>;
+  /** Opens the folder with main.log and uxplay.log. */
+  openLogs(): Promise<void>;
   onAirPlay(cb: (s: AirPlayState) => void): () => void;
   onAirPlayVideo(cb: (p: { config: boolean; key: boolean; pts: number; data: Uint8Array }) => void): () => void;
 
@@ -132,6 +134,7 @@ export const IPC = {
   airplayStop: "mm:airplay:stop",
   airplayEvent: "mm:airplay:event",
   airplayVideo: "mm:airplay:video",
+  openLogs: "mm:logs:open",
   androidStatus: "mm:android:status",
   androidDevices: "mm:android:devices",
   androidPair: "mm:android:pair",

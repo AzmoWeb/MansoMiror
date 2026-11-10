@@ -43,6 +43,10 @@ test("shipped runtime: found under resources/uxplay/bin and isolated to its own 
   assert.equal(env.GST_PLUGIN_SYSTEM_PATH, env.GST_PLUGIN_PATH);
   assert.equal(env.GST_REGISTRY, join("/data", "gst-registry.bin"));
   assert.ok(env.PATH!.startsWith(dirname(bin)));
+  // Windows: the existing "Path" key is updated, no second PATH key is added.
+  const win = runtimeEnv(bin, { Path: "C:\\Windows\\System32" });
+  assert.equal(Object.keys(win).filter((k) => k.toUpperCase() === "PATH").length, 1);
+  assert.ok(win.Path!.startsWith(dirname(bin)) && win.Path!.endsWith("System32"));
   // A system-wide UxPlay (no bundled plugins) keeps the normal environment.
   assert.deepEqual(runtimeEnv("/usr/bin/uxplay", { PATH: "/usr/bin" }), { PATH: "/usr/bin" });
 });
@@ -98,4 +102,17 @@ test("real UxPlay: announced as an AirPlay receiver under our name, then stopped
     await r.stop();
   }
   assert.equal(r.current.status, "stopped");
+});
+
+test("a receiver that dies right after starting reports an error with its last messages", { skip: process.platform === "win32" }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), "mm-bad-"));
+  const bin = join(dir, "uxplay");
+  writeFileSync(bin, "#!/bin/sh\necho \"Required gstreamer plugin 'app' not found\" >&2\nexit 0\n");
+  chmodSync(bin, 0o755);
+  const r = new AirPlayReceiver(bin);
+  const done = new Promise<void>((res) => r.on("state", (s) => s.status === "error" && res()));
+  await r.start("PC");
+  await done;
+  assert.equal(r.current.status, "error");
+  assert.match((r.current as { message: string }).message, /plugin 'app' not found/);
 });

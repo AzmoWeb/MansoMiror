@@ -90,9 +90,13 @@ export function runtimeEnv(bin: string, base: NodeJS.ProcessEnv = process.env, r
   const plugins = join(root, "lib", "gstreamer-1.0");
   if (!existsSync(plugins)) return base;
   const scanner = join(root, "libexec", "gstreamer-1.0", process.platform === "win32" ? "gst-plugin-scanner.exe" : "gst-plugin-scanner");
+  // Windows names it "Path" (case-insensitive); update the existing key instead of adding a second one.
+  const pathKey = Object.keys(base).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
+  const env: NodeJS.ProcessEnv = { ...base };
+  for (const k of Object.keys(env)) if (k.toUpperCase() === "PATH" && k !== pathKey) delete env[k];
   return {
-    ...base,
-    PATH: `${dirname(bin)}${delimiter}${base.PATH ?? ""}`,
+    ...env,
+    [pathKey]: `${dirname(bin)}${delimiter}${base[pathKey] ?? ""}`,
     GST_PLUGIN_PATH: plugins,
     GST_PLUGIN_SYSTEM_PATH: plugins,
     ...(existsSync(scanner) ? { GST_PLUGIN_SCANNER: scanner } : {}),
@@ -156,8 +160,15 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
       env,
     });
     this.proc = proc;
+    const recent: string[] = [];
+    const startedAt = Date.now();
     const onData = (buf: Buffer) => {
-      for (const line of buf.toString().split(/\r?\n/)) if (line.trim()) this.emit("log", line.trim());
+      for (const line of buf.toString().split(/\r?\n/)) {
+        if (!line.trim()) continue;
+        recent.push(line.trim());
+        if (recent.length > 12) recent.shift();
+        this.emit("log", line.trim());
+      }
     };
     proc.stdout?.on("data", onData);
     proc.stderr?.on("data", onData);
@@ -170,7 +181,11 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
       if (this.proc !== proc) return;
       this.proc = null;
       void this.video.close();
-      this.set(signal || code === 0 ? { status: "stopped" } : { status: "error", message: `UxPlay s'est arrêté (code ${code}).` });
+      // Stopped by us (signal) → "stopped". Anything else, or an exit right after start, is an error worth showing.
+      const early = Date.now() - startedAt < 5000;
+      if (signal && !early) return this.set({ status: "stopped" });
+      const tail = recent.filter((l) => /error|erreur|not found|fail|unable|cannot|invalid/i.test(l)).slice(-3).join(" · ") || recent.slice(-2).join(" · ");
+      this.set({ status: "error", message: `Le récepteur AirPlay s'est arrêté (code ${code ?? signal}).${tail ? ` ${tail}` : ""}` });
     });
     this.set({ status: "running", name, pin, since: Date.now(), inApp: !!this.inApp, streaming: false, videoPort });
     return this.state;

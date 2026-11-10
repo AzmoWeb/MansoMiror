@@ -92,7 +92,18 @@ const viewer = new ViewerClient();
 const discovery = new Discovery();
 const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
 app.whenReady().then(() => (airplay.registryDir = app.getPath("userData")));
-airplay.on("state", (st) => win?.webContents.send(IPC.airplayEvent, st));
+airplay.on("state", (st) => {
+  logLine(`airplay ${st.status}${st.status === "error" ? `: ${st.message}` : st.status === "running" ? ` inApp=${st.inApp} streaming=${st.streaming}` : ""}`);
+  win?.webContents.send(IPC.airplayEvent, st);
+});
+// Full receiver output, for diagnosis: <userData>/logs/uxplay.log
+airplay.on("log", (line) => {
+  try {
+    const dir = join(app.getPath("userData"), "logs");
+    mkdirSync(dir, { recursive: true });
+    appendFileSync(join(dir, "uxplay.log"), `${new Date().toISOString()} ${line}\n`);
+  } catch {}
+});
 airplay.on("video", (p) => win?.webContents.send(IPC.airplayVideo, p));
 
 // Test-only fake phone (see test/fixtures/fake-phone.mjs); ignored in packaged builds.
@@ -275,7 +286,20 @@ function registerIpc() {
     if (recheck === true) airplay.setBinary(findUxPlay(process.env, process.resourcesPath));
     return airplay.current;
   });
-  handle(IPC.airplayStart, () => airplay.start(store.settings.deviceName));
+  handle(IPC.airplayStart, async () => {
+    logLine("airplay start requested");
+    try {
+      return await airplay.start(store.settings.deviceName);
+    } catch (e) {
+      logLine(`airplay start failed: ${(e as Error).message}`);
+      return { status: "error", message: `Démarrage impossible : ${(e as Error).message}` };
+    }
+  });
+  handle(IPC.openLogs, async () => {
+    const dir = join(app.getPath("userData"), "logs");
+    mkdirSync(dir, { recursive: true });
+    await shell.openPath(dir);
+  });
   handle(IPC.airplayStop, () => airplay.stop());
 
   handle(IPC.updateState, () => updater.state);
