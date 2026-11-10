@@ -29,6 +29,8 @@ export type AirPlayState =
       streaming: boolean;
       /** Local port receiving the stream (127.0.0.1 only). */
       videoPort: number;
+      /** Something that can keep the iPhone from seeing this PC (e.g. firewall not allowed). */
+      notice?: string;
     }
   | { status: "error"; message: string };
 
@@ -124,6 +126,13 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
   private state: AirPlayState = { status: "stopped" };
   private bin: string | null;
 
+  /** Shown with the running state (set by the app, e.g. firewall refused). */
+  notice?: string;
+
+  get binary(): string | null {
+    return this.bin;
+  }
+
   /** Where GStreamer may cache its plugin registry (the app's user data folder). */
   registryDir?: string;
 
@@ -202,7 +211,7 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
       const tail = recent.filter((l) => /error|erreur|not found|fail|unable|cannot|invalid/i.test(l)).slice(-3).join(" · ") || recent.slice(-2).join(" · ");
       this.set({ status: "error", message: `Le récepteur AirPlay s'est arrêté (code ${code ?? signal}).${tail ? ` ${tail}` : ""}` });
     });
-    this.set({ status: "running", name, pin, since: Date.now(), inApp: !!this.inApp, streaming: false, videoPort });
+    this.set({ status: "running", name, pin, since: Date.now(), inApp: !!this.inApp, streaming: false, videoPort, ...(this.notice ? { notice: this.notice } : {}) });
     return this.state;
   }
 

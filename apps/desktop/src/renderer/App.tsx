@@ -500,6 +500,11 @@ function AirPlayPanel() {
             <p className="live">
               <span className="dot live-dot" /> Visible par les iPhone et iPad du réseau
             </p>
+            {st.notice && (
+              <p className="error" role="alert">
+                {st.notice}
+              </p>
+            )}
             <ol className="steps">
               <li>Sur l'iPhone, glissez depuis le coin supérieur droit pour ouvrir le Centre de contrôle.</li>
               <li>
@@ -507,9 +512,18 @@ function AirPlayPanel() {
               </li>
               <li>Saisissez le code ci-contre. {st.inApp ? "L'écran de l'iPhone s'affiche ici, en grand, avec le son." : "L'écran s'affiche dans une nouvelle fenêtre."}</li>
             </ol>
-            <button className="btn ghost" onClick={() => void mm.airplayStop()}>
-              Arrêter la réception
-            </button>
+            <p className="muted">
+              L'ordinateur n'apparaît pas sur l'iPhone ? Vérifiez que les deux sont sur le même Wi-Fi (pas un réseau « invité »), puis
+              arrêtez et réactivez la réception.
+            </p>
+            <div className="row">
+              <button className="btn ghost" onClick={() => void mm.airplayStop()}>
+                Arrêter la réception
+              </button>
+              <button className="btn ghost" onClick={() => void mm.openLogs()}>
+                Ouvrir les journaux
+              </button>
+            </div>
           </div>
           <div className="airplay-code">
             <p className="label">Code AirPlay</p>
