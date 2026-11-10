@@ -18,6 +18,22 @@ Application Electron pour **Windows, macOS et Linux** : partage d'écran entre d
 | Paquets Linux AppImage et .deb | ✅ | compilés et lancés (interface vérifiée) |
 | Installeur Windows `.exe` et `.dmg` macOS | ⏳ | compilés par GitHub Actions sur de vrais Windows/Mac ; **pas encore testés sur une machine réelle** |
 
+## Recevoir un iPhone ou un iPad (AirPlay)
+
+Le panneau « Recevoir un iPhone ou un iPad » transforme l'ordinateur en récepteur **AirPlay** : sur l'iPhone, Centre de
+contrôle → **Recopie de l'écran** → choisir « *nom de l'ordinateur* · MansoMirror » → saisir le code à 4 chiffres affiché.
+
+- Récepteur : [UxPlay](https://github.com/FDH2/UxPlay) (open source, **GPL-3.0**), lancé comme programme séparé
+  (`src/main/airplay.ts`). Il affiche l'écran de l'iPhone dans sa propre fenêtre.
+- Sécurité : code à 4 chiffres tiré au hasard à chaque activation ; la réception s'arrête avec « Tout couper ».
+- Testé : l'ordinateur s'annonce bien sur le réseau comme récepteur AirPlay (`_airplay._tcp`) sous le bon nom
+  (test automatique avec le vrai UxPlay). **Pas encore testé avec un vrai iPhone** (aucun iPhone dans l'environnement de test).
+- Installation actuelle : UxPlay doit être installé à part (Linux : `sudo apt install uxplay gstreamer1.0-plugins-bad
+  gstreamer1.0-libav` ; macOS : `brew install uxplay`). **Windows : intégration à l'installeur à venir** (UxPlay, GStreamer
+  et le service Bonjour d'Apple sont nécessaires).
+- AirPlay est un protocole Apple non documenté publiquement : UxPlay en est une réimplémentation ; une mise à jour d'iOS
+  peut nécessiter une mise à jour d'UxPlay. Distribuer UxPlay avec l'application impose de fournir son code source (GPL-3.0).
+
 ## Ce qu'elle ne fait pas encore
 
 - **Recopier un téléphone** : cela demande l'application mobile (phases 4–5).

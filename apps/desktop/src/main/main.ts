@@ -6,6 +6,7 @@ import { HostServer } from "./host.ts";
 import { ViewerClient, PairingError } from "./viewer.ts";
 import { Discovery, localAddresses } from "./discovery.ts";
 import { Store } from "./store.ts";
+import { AirPlayReceiver, findUxPlay } from "./airplay.ts";
 import { randomHex } from "./pairing.ts";
 import { IPC, type CaptureSource, type HostEvent, type ViewerEvent } from "../shared/api.ts";
 
@@ -61,6 +62,8 @@ let deviceId = "";
 const host = new HostServer(() => store.settings.deviceName);
 const viewer = new ViewerClient();
 const discovery = new Discovery();
+const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
+airplay.on("state", (st) => win?.webContents.send(IPC.airplayEvent, st));
 let selectedSource: DesktopCapturerSource | null = null;
 /** Sources from the last listing shown to the user; only these can be selected. */
 let listedSources = new Map<string, DesktopCapturerSource>();
@@ -106,7 +109,7 @@ viewer.on("ended", ({ reason }) => {
 
 async function killAll() {
   viewer.disconnect();
-  await host.stop("killed");
+  await Promise.all([host.stop("killed"), airplay.stop()]);
   discovery.unpublish();
   selectedSource = null;
   win?.webContents.send(IPC.killed);
@@ -204,6 +207,13 @@ function registerIpc() {
   handle(IPC.viewerDisconnect, () => viewer.disconnect());
   handle(IPC.killAll, () => killAll());
 
+  handle(IPC.airplayState, (recheck) => {
+    if (recheck === true) airplay.setBinary(findUxPlay(process.env, process.resourcesPath));
+    return airplay.current;
+  });
+  handle(IPC.airplayStart, () => airplay.start(store.settings.deviceName));
+  handle(IPC.airplayStop, () => airplay.stop());
+
   handle(IPC.saveFile, async (kind, data) => {
     if ((kind !== "png" && kind !== "webm") || !(data instanceof ArrayBuffer || ArrayBuffer.isView(data))) throw new Error("invalid argument");
     const buf = data instanceof ArrayBuffer ? Buffer.from(new Uint8Array(data)) : Buffer.from(data as Uint8Array);
@@ -288,4 +298,5 @@ app.on("will-quit", () => {
   viewer.disconnect();
   void host.stop("stopped");
   discovery.destroy();
+  void airplay.stop();
 });

@@ -71,6 +71,15 @@ h1, h2 { font-family: var(--mm-font-display); letter-spacing: -0.01em; margin: 0
 .panel { border: 1px solid var(--mm-border); border-radius: var(--mm-radius-lg); padding: 22px; background: var(--mm-surface); }
 .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; color: var(--mm-accent-text); }
 .panel-head h2 { font-size: 17px; color: var(--mm-text); }
+.panel.wide { grid-column: 1 / -1; }
+.tag { margin-left: auto; font-size: 11px; font-family: var(--mm-font-mono); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--mm-border-strong); color: var(--mm-text-muted); }
+.panel code { font-size: 12px; padding: 2px 6px; border-radius: 4px; background: var(--mm-bg-subtle); user-select: text; }
+.airplay-on { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: start; }
+.airplay-on .live { color: var(--mm-live-text); display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0 8px; }
+.steps { margin: 0 0 16px; padding-left: 20px; color: var(--mm-text-muted); }
+.steps li { margin: 4px 0; }
+.steps b { color: var(--mm-text); }
+.airplay-code { text-align: center; padding: 8px 20px; border-left: 1px solid var(--mm-border); }
 
 .sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .source { display: flex; flex-direction: column; gap: 6px; padding: 6px; border: 1px solid var(--mm-border); border-radius: var(--mm-radius-md); background: var(--mm-surface-raised); text-align: left; }

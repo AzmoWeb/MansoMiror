@@ -23,6 +23,8 @@ Règle : une ligne passe en ✅ seulement si elle est développée **et** testé
 | Site — téléchargements alimentés automatiquement par les versions GitHub publiées | ✅ | `apps/web/scripts/fetch-releases.ts` — 5 tests unitaires ; rendu vérifié avec des données de test |
 | Desktop — installeurs compilés sur GitHub (Windows, macOS, Linux) | ✅ | workflow « Release desktop », exécution 42705656233 |
 | Desktop — version publiée | ⏳ | à lancer : Actions → Release desktop → Run workflow → « publish » |
+| Desktop — recevoir un iPhone/iPad par AirPlay (« Recopie de l'écran ») via UxPlay | ✅ partiel | annonce AirPlay vérifiée sur le réseau (test réel) ; **à tester avec un vrai iPhone** ; UxPlay à installer à part (Windows : à intégrer) |
+| Desktop — version 0.1.0-beta.1 publiée (Windows, macOS, Linux) | ✅ | GitHub Releases |
 | Mobile, backend, admin | ⏳ | phases 4 à 6 |
 
 La section Téléchargements du site lit `apps/web/src/content/releases.ts`. Seuls des fichiers réellement publiés sur

@@ -1,7 +1,8 @@
 import type { Settings, HistoryEntry } from "../main/store.ts";
 import type { DiscoveredDevice } from "../main/discovery.ts";
+import type { AirPlayState } from "../main/airplay.ts";
 
-export type { Settings, HistoryEntry, DiscoveredDevice };
+export type { Settings, HistoryEntry, DiscoveredDevice, AirPlayState };
 
 export interface AppInfo {
   version: string;
@@ -64,6 +65,12 @@ export interface MansoApi {
   onKilled(cb: () => void): () => void;
 
   saveFile(kind: "png" | "webm", data: ArrayBuffer): Promise<string | null>;
+
+  /** AirPlay receiver (iPhone / iPad "Recopie de l'écran"). recheck = look for UxPlay again. */
+  airplayState(recheck?: boolean): Promise<AirPlayState>;
+  airplayStart(): Promise<AirPlayState>;
+  airplayStop(): Promise<void>;
+  onAirPlay(cb: (s: AirPlayState) => void): () => void;
 }
 
 export const IPC = {
@@ -91,4 +98,8 @@ export const IPC = {
   killAll: "mm:kill",
   killed: "mm:killed",
   saveFile: "mm:save",
+  airplayState: "mm:airplay:state",
+  airplayStart: "mm:airplay:start",
+  airplayStop: "mm:airplay:stop",
+  airplayEvent: "mm:airplay:event",
 } as const;

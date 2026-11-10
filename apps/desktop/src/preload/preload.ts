@@ -36,6 +36,10 @@ const api: MansoApi = {
   killAll: () => invoke(IPC.killAll),
   onKilled: (cb) => listen(IPC.killed, cb),
   saveFile: (kind, data) => invoke(IPC.saveFile, kind, data),
+  airplayState: (recheck) => invoke(IPC.airplayState, recheck === true),
+  airplayStart: () => invoke(IPC.airplayStart),
+  airplayStop: () => invoke(IPC.airplayStop),
+  onAirPlay: (cb) => listen(IPC.airplayEvent, cb),
 };
 
 contextBridge.exposeInMainWorld("mm", api);
