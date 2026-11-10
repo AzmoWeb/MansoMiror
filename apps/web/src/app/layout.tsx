@@ -13,7 +13,7 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrai
 export const metadata: Metadata = {
   title: { default: "MansoMirror — Votre écran. Partout. En toute simplicité.", template: "%s · MansoMirror" },
   description:
-    "MansoMirror vous permet de partager et de contrôler vos appareils en quelques secondes, entre votre smartphone et votre ordinateur, en Wi-Fi ou en USB.",
+    "Affichez l'écran de votre iPhone ou de votre téléphone Android en grand sur votre ordinateur, avec le son et en haute qualité. Sans fil ou par câble. Windows, macOS, Linux.",
   applicationName: "MansoMirror",
 };
 

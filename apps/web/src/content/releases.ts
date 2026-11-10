@@ -33,11 +33,9 @@ export interface PlatformInfo {
 }
 
 export const platforms: PlatformInfo[] = [
-  { id: "windows", name: "Windows", app: "MansoMirror Desktop", requirements: "Windows 10 ou 11, 64 bits", scope: "Partage d'écran entre ordinateurs" },
-  { id: "macos", name: "macOS", app: "MansoMirror Desktop", requirements: "macOS 12 ou plus récent, Intel ou Apple Silicon", scope: "Partage d'écran entre ordinateurs" },
-  { id: "linux", name: "Linux", app: "MansoMirror Desktop", requirements: "64 bits, session X11 (Wayland : à l'étude)", scope: "Partage d'écran entre ordinateurs" },
-  { id: "android", name: "Android", app: "MansoMirror Mobile", requirements: "Android 10 ou plus récent" },
-  { id: "ios", name: "iOS / iPadOS", app: "MansoMirror Mobile", requirements: "iOS / iPadOS 15 ou plus récent" },
+  { id: "windows", name: "Windows", app: "MansoMirror Desktop", requirements: "Windows 10 ou 11, 64 bits", scope: "Écran de l'iPhone ou d'Android sur le PC" },
+  { id: "macos", name: "macOS", app: "MansoMirror Desktop", requirements: "macOS 12 ou plus récent, Intel ou Apple Silicon", scope: "Écran de l'iPhone ou d'Android sur le PC" },
+  { id: "linux", name: "Linux", app: "MansoMirror Desktop", requirements: "64 bits, session X11 (Wayland : à l'étude)", scope: "Écran de l'iPhone ou d'Android sur le PC" },
 ];
 
 /** Generated at build time by scripts/fetch-releases.ts from the GitHub releases API. */

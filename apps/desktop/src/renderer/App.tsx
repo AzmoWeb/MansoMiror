@@ -4,6 +4,7 @@ import { errorText, type ErrorCode } from "../shared/protocol.ts";
 import { bitrateFor, captureScreen, createHost, createViewer, watchStats, type LiveStats } from "./webrtc.ts";
 import { Icon, LogoMark, Modal, Svg, Toasts, useCountdown, useElapsed, type Toast } from "./ui.tsx";
 import { AndroidPanel, AndroidScreen } from "./android-ui.tsx";
+import { IPhoneScreen } from "./iphone-ui.tsx";
 import type { AndroidDevice } from "../shared/api.ts";
 
 declare global {
@@ -233,13 +234,23 @@ export function App() {
   }
 
   const [androidDevice, setAndroidDevice] = useState<AndroidDevice | null>(null);
-  const [airplayOn, setAirplayOn] = useState(false);
+  const [airplay, setAirplay] = useState<AirPlayState | null>(null);
   useEffect(() => {
-    void mm.airplayState().then((st) => setAirplayOn(st.status === "running"));
-    return mm.onAirPlay((st) => setAirplayOn(st.status === "running"));
+    void mm.airplayState().then(setAirplay);
+    return mm.onAirPlay(setAirplay);
   }, []);
+  const airplayOn = airplay?.status === "running";
 
   const active = host.s === "waiting" || host.s === "sharing" || viewer.s === "watching" || airplayOn;
+
+  if (airplay?.status === "running" && airplay.inApp && airplay.streaming) {
+    return (
+      <>
+        <IPhoneScreen name={airplay.name} toast={toast} onKill={() => void mm.killAll()} onStop={() => void mm.airplayStop()} />
+        <Toasts items={toasts} />
+      </>
+    );
+  }
 
   if (androidDevice) {
     return (
@@ -473,7 +484,7 @@ function AirPlayPanel() {
               <li>
                 Touchez <b>Recopie de l'écran</b>, puis <b>{st.name}</b>.
               </li>
-              <li>Saisissez le code ci-contre. L'écran s'affiche dans une nouvelle fenêtre.</li>
+              <li>Saisissez le code ci-contre. {st.inApp ? "L'écran de l'iPhone s'affiche ici, en grand, avec le son." : "L'écran s'affiche dans une nouvelle fenêtre."}</li>
             </ol>
             <button className="btn ghost" onClick={() => void mm.airplayStop()}>
               Arrêter la réception

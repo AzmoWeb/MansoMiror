@@ -10,7 +10,7 @@ export function Hero() {
       <div className="container-page grid items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
         <div>
           <motion.p className="eyebrow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-            Recopie d'écran · Contrôle à distance
+            iPhone · Android · Son · Haute qualité
           </motion.p>
           <motion.h1
             className="mt-4 font-display text-[2.5rem] font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.6rem]"
@@ -30,8 +30,7 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.08, ease: [0.2, 0, 0, 1] }}
           >
-            MansoMirror vous permet de partager et de contrôler vos appareils en quelques secondes. Profitez d'une expérience
-            fluide entre votre smartphone et votre ordinateur.
+            Affichez l'écran de votre iPhone ou de votre téléphone Android en grand sur votre ordinateur, avec le son et en haute qualité. Sans fil ou par câble, en quelques secondes.
           </motion.p>
           <motion.div
             className="mt-8 flex flex-col gap-3 sm:flex-row"
@@ -46,7 +45,7 @@ export function Hero() {
               Découvrir MansoMirror
             </Link>
           </motion.div>
-          <p className="mt-5 text-sm text-subtle">En développement — bêta pour Windows, macOS et Linux ; application mobile à venir.</p>
+          <p className="mt-5 text-sm text-subtle">Bêta gratuite pour Windows, macOS et Linux · rien à installer sur le téléphone.</p>
         </div>
         <HeroScene />
       </div>

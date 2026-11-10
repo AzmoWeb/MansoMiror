@@ -25,8 +25,8 @@ export function Downloads() {
           )}
           {anyBeta && (
             <p className="mt-4 text-muted" data-testid="beta-warning">
-              Version <strong className="text-ink">bêta</strong> : elle permet de partager l'écran d'un ordinateur avec un autre
-              ordinateur du même réseau. Les installeurs ne sont pas encore signés : Windows affichera « Windows a protégé votre
+              Version <strong className="text-ink">bêta</strong> : elle affiche l'écran de votre iPhone ou de votre Android sur
+              l'ordinateur. Les installeurs ne sont pas encore signés : Windows affichera « Windows a protégé votre
               ordinateur » (cliquez sur « Informations complémentaires » puis « Exécuter quand même ») ; sur macOS, faites un clic
               droit sur l'application puis « Ouvrir ».
             </p>
@@ -79,7 +79,11 @@ export function Downloads() {
             );
           })}
         </div>
-        <p className="mt-5 text-sm text-muted">
+        <p className="mt-5 text-sm text-muted" data-testid="phone-note">
+          <strong className="text-ink">Rien à installer sur le téléphone.</strong> iPhone et iPad : « Recopie de l'écran » dans le
+          Centre de contrôle. Android : débogage USB (ou sans fil) à activer une fois.
+        </p>
+        <p className="mt-2 text-sm text-muted">
           Toutes les versions et leurs empreintes sont publiées sur{" "}
           <a href={`${githubUrl}/releases`} className="font-medium text-accent-ink underline underline-offset-4">
             GitHub

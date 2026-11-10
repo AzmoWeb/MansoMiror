@@ -2,8 +2,8 @@ import { compatColumns, compatRows, supportLabel, type Support } from "@/content
 import { Reveal } from "../Reveal";
 
 const style: Record<Support, string> = {
-  planned: "text-ok-ink",
-  limited: "text-warn-ink",
+  available: "text-ok-ink",
+  planned: "text-accent-ink",
   studying: "text-muted",
   impossible: "text-danger-ink",
 };
@@ -14,7 +14,7 @@ function Glyph({ s }: { s: Support }) {
         <path d="M2 2l6 6M8 2L2 8" />
       </svg>
     );
-  const fill = { planned: "bg-current", limited: "bg-[linear-gradient(90deg,currentColor_50%,transparent_50%)]", studying: "" }[s];
+  const fill = { available: "bg-current", planned: "bg-[linear-gradient(90deg,currentColor_50%,transparent_50%)]", studying: "" }[s];
   return <span aria-hidden="true" className={`size-2.5 rounded-full border-[1.5px] border-current ${fill}`} />;
 }
 
@@ -25,15 +25,15 @@ export function Compatibility() {
       <div className="container-page">
         <Reveal className="max-w-2xl">
           <p className="eyebrow">Compatibilité</p>
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-4xl">Ce que chaque plateforme permettra.</h2>
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-4xl">Votre téléphone, sur votre PC.</h2>
           <p className="mt-4 text-muted">
-            Aucune fonctionnalité n'est encore disponible. Ce tableau décrit ce qui est prévu, et ce que les systèmes
-            n'autorisent pas. Il sera mis à jour après les tests sur appareils réels.
+            MansoMirror s'installe sur l'ordinateur (Windows, macOS ou Linux). Voici ce que chaque téléphone permet, y
+            compris ce que les systèmes n'autorisent pas.
           </p>
         </Reveal>
 
         <Reveal className="mt-10 -mx-4 overflow-x-auto px-4">
-          <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[520px] border-collapse text-left text-sm">
             <caption className="sr-only">Fonctionnalités prévues par plateforme</caption>
             <thead>
               <tr className="border-b border-line-strong">

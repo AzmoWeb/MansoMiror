@@ -83,6 +83,23 @@ jobs:
           # No signing certificate yet: builds are unsigned (see documentation/desktop.md).
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: pnpm dist ${{ matrix.target }}
+      - name: Install the .exe and check the app really opens (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem apps/desktop/release/*.exe | Select-Object -First 1
+          Start-Process -FilePath $setup.FullName -ArgumentList "/S" -Wait
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter mansomirror.exe | Select-Object -First 1
+          if (-not $exe) { throw "Installed app not found" }
+          Write-Output "Installed: $($exe.FullName)"
+          $p = Start-Process -FilePath $exe.FullName -PassThru
+          Start-Sleep -Seconds 20
+          $log = Join-Path $env:APPDATA "MansoMirror\logs\main.log"
+          if (Test-Path $log) { Get-Content $log } else { Write-Output "no log file at $log" }
+          $alive = -not $p.HasExited
+          Get-Process mansomirror -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $alive) { throw "The app exited right after launch (code $($p.ExitCode))" }
+          if (-not (Test-Path $log) -or -not (Select-String -Path $log -Pattern "window shown" -Quiet)) { throw "The window was never shown" }
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os }}

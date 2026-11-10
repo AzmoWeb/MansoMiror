@@ -17,6 +17,14 @@ test("arguments: exact name, mandatory 4-digit code, stale session reset", () =>
   assert.ok(a.includes("-reset"));
 });
 
+test("in-app mode: video goes to our local port, 1080p60 requested, no UxPlay window", () => {
+  const a = airplayArgs("PC", "1234", "win32", 5001);
+  assert.match(a[a.indexOf("-vrtp") + 1], /tcpclientsink host=127\.0\.0\.1 port=5001/);
+  assert.equal(a[a.indexOf("-s") + 1], "1920x1080@60");
+  assert.equal(a[a.indexOf("-fps") + 1], "60");
+  assert.ok(!a.includes("-vs"), "no UxPlay video window");
+});
+
 test("Windows: Direct3D 11 video output; other systems keep UxPlay's default", () => {
   const w = airplayArgs("PC", "1234", "win32");
   assert.equal(w[w.indexOf("-vs") + 1], "d3d11videosink");
@@ -49,10 +57,10 @@ test("findUxPlay: explicit path wins, otherwise searched on PATH, null when abse
   assert.equal(findUxPlay({ PATH: join(dir, "nothing-here") }), null);
 });
 
-test("without UxPlay the receiver reports itself unavailable and start() is a no-op", () => {
+test("without UxPlay the receiver reports itself unavailable and start() is a no-op", async () => {
   const r = new AirPlayReceiver(null);
   assert.deepEqual(r.current, { status: "unavailable", reason: "not-installed" });
-  assert.deepEqual(r.start("PC"), { status: "unavailable", reason: "not-installed" });
+  assert.deepEqual(await r.start("PC"), { status: "unavailable", reason: "not-installed" });
 });
 
 const uxplay = findUxPlay();
@@ -65,7 +73,7 @@ test("real UxPlay: announced as an AirPlay receiver under our name, then stopped
   const logs: string[] = [];
   r.on("log", (l) => logs.push(l));
   const name = `Test-${process.pid}`;
-  const st = r.start(name);
+  const st = await r.start(name);
   assert.equal(st.status, "running");
   assert.match((st as { pin: string }).pin, /^\d{4}$/);
 

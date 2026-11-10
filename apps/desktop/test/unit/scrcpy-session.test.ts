@@ -43,3 +43,25 @@ test("session: gives up with a clear error when nothing answers", { timeout: 30_
   const s = new ScrcpySession();
   await assert.rejects(s.attach(1), /ne répond pas/);
 });
+
+test("no byte is lost when the phone sends its header before the control socket is connected", { timeout: 15_000 }, async () => {
+  const { createServer } = await import("node:net");
+  const head = Buffer.alloc(76);
+  head.write("Rapide", 0);
+  head.writeUInt32BE(0x68323634, 64);
+  head.writeUInt32BE(1080, 68);
+  head.writeUInt32BE(2400, 72);
+  let n = 0;
+  const srv = createServer((sock) => {
+    n++;
+    // dummy byte + device header in one write, immediately — before the client opens the control socket
+    if (n === 1) sock.write(Buffer.concat([Buffer.from([0]), head]));
+  });
+  await new Promise<void>((r) => srv.listen(0, "127.0.0.1", () => r()));
+  const s = new ScrcpySession();
+  const meta = new Promise<VideoMeta>((r) => s.once("meta", r));
+  await s.attach((srv.address() as { port: number }).port);
+  assert.deepEqual(await meta, { deviceName: "Rapide", codecId: 0x68323634, width: 1080, height: 2400 });
+  s.end();
+  await new Promise((r) => srv.close(r));
+});

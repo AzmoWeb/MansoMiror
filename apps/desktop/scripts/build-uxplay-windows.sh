@@ -35,7 +35,8 @@ cp /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe "$OUT/libexec/gstreamer-
 # d3d11/d3d12 video sinks and decoders, wasapi/directsound audio sinks.
 PLUGINS="coreelements app playback typefindfunctions videoparsersbad libav audioparsers
   videoconvertscale videoconvert videoscale videofilter imagefreeze jpeg pango debugutilsbad
-  audioconvert audioresample level volume autodetect d3d11 d3d12 wasapi wasapi2 directsound"
+  audioconvert audioresample level volume autodetect d3d11 d3d12 wasapi wasapi2 directsound
+  rtp tcp" # rtp + tcp: -vrtp hands the iPhone picture to the MansoMirror window
 for p in $PLUGINS; do
   f=/ucrt64/lib/gstreamer-1.0/libgst$p.dll
   if [ -f "$f" ]; then cp "$f" "$OUT/lib/gstreamer-1.0/"; fi

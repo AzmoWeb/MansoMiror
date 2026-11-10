@@ -75,7 +75,8 @@ export class H264CanvasDecoder {
     this.decoder?.close();
     this.decoder = new VideoDecoder({
       output: (f) => this.draw(f),
-      error: () => {
+      error: (e) => {
+        console.error("decoder error", e?.message);
         // Corrupted state: wait for a fresh key frame.
         this.needKey = true;
         this.decoder = null;

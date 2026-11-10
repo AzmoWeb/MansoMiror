@@ -82,6 +82,7 @@ export interface MansoApi {
   airplayStart(): Promise<AirPlayState>;
   airplayStop(): Promise<void>;
   onAirPlay(cb: (s: AirPlayState) => void): () => void;
+  onAirPlayVideo(cb: (p: { config: boolean; key: boolean; pts: number; data: Uint8Array }) => void): () => void;
 
   /** Android: show and control a phone inside MansoMirror. */
   androidStatus(): Promise<{ adb: boolean; server: boolean; available: boolean }>;
@@ -130,6 +131,7 @@ export const IPC = {
   airplayStart: "mm:airplay:start",
   airplayStop: "mm:airplay:stop",
   airplayEvent: "mm:airplay:event",
+  airplayVideo: "mm:airplay:video",
   androidStatus: "mm:android:status",
   androidDevices: "mm:android:devices",
   androidPair: "mm:android:pair",

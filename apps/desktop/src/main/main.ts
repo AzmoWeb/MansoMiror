@@ -1,6 +1,6 @@
 import { app, BrowserWindow, desktopCapturer, dialog, type DesktopCapturerSource, globalShortcut, ipcMain, protocol, session, shell, type IpcMainInvokeEvent } from "electron";
 import { join, normalize, extname, sep } from "node:path";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, appendFileSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { HostServer } from "./host.ts";
 import { ViewerClient, PairingError } from "./viewer.ts";
@@ -17,11 +17,35 @@ import { IPC, type CaptureSource, type HostEvent, type ViewerEvent } from "../sh
 // ---------------------------------------------------------------------------
 // Process-wide hardening
 // ---------------------------------------------------------------------------
+// Startup/crash journal: <userData>/logs/main.log (no personal data, only events and errors).
+function logLine(msg: string) {
+  try {
+    const dir = join(app.getPath("userData"), "logs");
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, "main.log");
+    try {
+      if (statSync(file).size > 1_000_000) writeFileSync(file, "");
+    } catch {}
+    appendFileSync(file, `${new Date().toISOString()} ${msg}\n`);
+  } catch {}
+}
+function fatal(where: string, e: unknown) {
+  const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e);
+  logLine(`ERROR ${where}: ${msg}`);
+  if (app.isReady()) dialog.showErrorBox("MansoMirror — erreur", `${where} : ${e instanceof Error ? e.message : String(e)}\n\nJournal : ${join(app.getPath("userData"), "logs", "main.log")}`);
+}
+process.on("uncaughtException", (e) => fatal("Erreur inattendue", e));
+process.on("unhandledRejection", (e) => logLine(`WARN unhandled rejection: ${e instanceof Error ? e.message : String(e)}`));
+logLine(`start v${app.getVersion()} ${process.platform} ${process.arch} electron ${process.versions.electron}`);
+
 // Process-wide sandbox, unless explicitly disabled (only needed to run as root in CI containers).
 if (!app.commandLine.hasSwitch("no-sandbox")) app.enableSandbox();
 // Test-only: lets the end-to-end suite run two isolated instances side by side.
 if (!app.isPackaged && process.env.MM_USER_DATA) app.setPath("userData", process.env.MM_USER_DATA);
-if (!app.requestSingleInstanceLock()) app.quit();
+if (!app.requestSingleInstanceLock()) {
+  logLine("another instance is running: handing over and exiting");
+  app.quit();
+}
 
 // The UI is served from a private, secure scheme rather than file://, so the
 // GrantFileProtocolExtraPrivileges fuse can stay off.
@@ -69,6 +93,7 @@ const discovery = new Discovery();
 const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
 app.whenReady().then(() => (airplay.registryDir = app.getPath("userData")));
 airplay.on("state", (st) => win?.webContents.send(IPC.airplayEvent, st));
+airplay.on("video", (p) => win?.webContents.send(IPC.airplayVideo, p));
 
 // Test-only fake phone (see test/fixtures/fake-phone.mjs); ignored in packaged builds.
 const fakePhonePort = !app.isPackaged && process.env.MM_ANDROID_FAKE_PORT ? Number(process.env.MM_ANDROID_FAKE_PORT) : null;
@@ -84,6 +109,7 @@ const updater = new Updater(
 updater.on("state", (st) => win?.webContents.send(IPC.updateEvent, st));
 const androidHistory = new Map<string, string>();
 android.on("event", (e) => {
+  logLine(e.type === "meta" ? `android meta ${e.meta.width}x${e.meta.height}` : `android ended: ${e.reason}`);
   if (e.type === "meta") {
     const id = randomHex(8);
     androidHistory.set(e.serial, id);
@@ -278,6 +304,7 @@ function registerIpc() {
   });
   handle(IPC.androidStart, async (serial, control) => {
     if (!isSerial(serial)) return { ok: false, message: "Appareil invalide." };
+    logLine("android start");
     try {
       await android.start(serial, {
         maxSize: store.settings.maxHeight,
@@ -285,8 +312,10 @@ function registerIpc() {
         bitRate: store.settings.maxHeight && store.settings.maxHeight <= 720 ? 4_000_000 : 8_000_000,
         control: control !== false,
       });
+      logLine("android started");
       return { ok: true };
     } catch (e) {
+      logLine(`android start failed: ${(e as Error).message}`);
       return { ok: false, message: (e as Error).message };
     }
   });
@@ -332,12 +361,28 @@ function createWindow() {
       spellcheck: false,
     },
   });
-  win.once("ready-to-show", () => win?.show());
+  win.once("ready-to-show", () => {
+    win?.show();
+    logLine("window shown");
+  });
+  // Never stay invisible: show the window even if the page is slow or failed to load.
+  setTimeout(() => {
+    if (win && !win.isVisible()) {
+      logLine("WARN window shown before ready-to-show");
+      win.show();
+    }
+  }, 5000);
+  win.webContents.on("did-fail-load", (_e, code, desc) => logLine(`ERROR page load failed: ${code} ${desc}`));
+  win.webContents.on("render-process-gone", (_e, d) => {
+    logLine(`ERROR renderer gone: ${d.reason}`);
+    if (d.reason !== "clean-exit" && win && !win.isDestroyed()) win.reload();
+  });
   win.on("closed", () => (win = null));
   void win.loadURL(RENDERER_URL);
 }
 
 app.whenReady().then(() => {
+  logLine("ready");
   protocol.handle(SCHEME, serveRenderer);
   store = new Store(app.getPath("userData"));
   deviceId = loadDeviceId(app.getPath("userData"));
@@ -362,13 +407,18 @@ app.whenReady().then(() => {
 
   // Global kill switch, works even when the window is hidden behind others.
   globalShortcut.register("CommandOrControl+Alt+K", () => void killAll());
-});
+}).catch((e) => fatal("Démarrage impossible", e));
 
 app.on("second-instance", () => {
-  if (win) {
-    if (win.isMinimized()) win.restore();
-    win.focus();
+  // Relaunching must always bring a window back, even if the previous one was closed.
+  if (!win || win.isDestroyed()) {
+    logLine("second-instance: recreating window");
+    createWindow();
+    return;
   }
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
 });
 
 app.on("window-all-closed", () => {

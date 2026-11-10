@@ -144,7 +144,10 @@ export class AndroidService extends EventEmitter<AndroidServiceEvents> {
 
   input(serial: string, i: unknown): boolean {
     const sess = this.sessions.get(serial);
-    if (!sess || !sess.control) return false;
+    if (!sess) return false;
+    const isReset = typeof i === "object" && i !== null && (i as { kind?: unknown }).kind === "reset-video";
+    // View-only sessions refuse every input except asking for a fresh key frame.
+    if (!sess.control && !isReset) return false;
     const msgs = inputToMessages(i);
     if (!msgs) return false;
     for (const m of msgs) sess.s.send(m);

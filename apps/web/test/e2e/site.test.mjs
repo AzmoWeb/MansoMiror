@@ -64,16 +64,13 @@ test("home renders every required section without console errors", async () => {
   await ctx.close();
 });
 
-test("downloads only link to real GitHub release files; mobile is not offered", async () => {
+test("downloads: computers only, real GitHub files, and nothing to install on the phone", async () => {
   const { ctx, page } = await open();
   const section = page.locator("#telecharger");
-  for (const id of ["android", "ios"]) {
-    const row = section.locator(`[data-platform="${id}"]`);
-    assert.equal(await row.locator("a[download]").count(), 0);
-    assert.equal(await row.getByText("Pas encore disponible").count(), 1);
-  }
+  assert.deepEqual(await section.locator("[data-platform]").evaluateAll((r) => r.map((x) => x.dataset.platform)), ["windows", "macos", "linux"]);
   const links = await section.locator("a[download]").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
   for (const href of links) assert.match(href, /^https:\/\/github\.com\/AzmoWeb\/MansoMiror\/releases\/download\//);
+  assert.match(await page.getByTestId("phone-note").innerText(), /Rien à installer sur le téléphone/);
   if (links.length) assert.equal(await page.getByTestId("beta-warning").count(), 1);
   else assert.equal(await page.getByTestId("no-release").count(), 1);
   await ctx.close();
@@ -81,11 +78,11 @@ test("downloads only link to real GitHub release files; mobile is not offered", 
 
 test("FAQ accordion opens and closes with correct aria state", async () => {
   const { ctx, page } = await open();
-  const q = page.getByRole("button", { name: "Puis-je utiliser une connexion USB ?" });
+  const q = page.getByRole("button", { name: "Y a-t-il le son ?" });
   assert.equal(await q.getAttribute("aria-expanded"), "false");
   await q.click();
   assert.equal(await q.getAttribute("aria-expanded"), "true");
-  await page.getByText(/la connexion USB est prévue dès la première version/).waitFor();
+  await page.getByText(/le son sort de l'ordinateur/).waitFor();
   await q.click();
   assert.equal(await q.getAttribute("aria-expanded"), "false");
   await ctx.close();
@@ -93,7 +90,7 @@ test("FAQ accordion opens and closes with correct aria state", async () => {
 
 test("feature list highlights the matching part of the product view", async () => {
   const { ctx, page } = await open({ viewport: { width: 1440, height: 900 } });
-  const item = page.locator("#fonctionnalites").getByRole("button", { name: /Enregistrement vidéo/ });
+  const item = page.locator("#fonctionnalites").getByRole("button", { name: /Enregistrement/ });
   await item.hover();
   assert.equal(await item.getAttribute("aria-pressed"), "true");
   await page.locator("#fonctionnalites").getByText("REC", { exact: true }).waitFor();
