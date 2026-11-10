@@ -20,7 +20,10 @@ git clone --quiet "$UXPLAY_REPO" "$SRC/UxPlay"
 git -C "$SRC/UxPlay" checkout --quiet "$UXPLAY_COMMIT"
 # Our change (GPL: shipped next to the binary): when no adapter passes UxPlay's
 # Windows filters, the mDNS announcement had no IPv4 address at all.
-git -C "$SRC/UxPlay" apply "$HERE/uxplay-windows-mdns-ip.patch"
+# (a Windows checkout may turn the patch's line endings into CRLF: strip them)
+tr -d '\r' < "$HERE/uxplay-windows-mdns-ip.patch" > "$SRC/mdns-ip.patch"
+git -C "$SRC/UxPlay" apply --ignore-whitespace "$SRC/mdns-ip.patch"
+grep -q '"8.8.8.8"' "$SRC/UxPlay/lib/mdnsd/mdnsd.c"
 mkdir -p "$SRC/UxPlay/build"
 cd "$SRC/UxPlay/build"
 # NO_MARCH_NATIVE: by default UxPlay compiles with -march=native, i.e. for the
