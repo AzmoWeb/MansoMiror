@@ -1,0 +1,17 @@
+MansoMirror Desktop includes or uses the following third-party software.
+
+scrcpy-server 3.3.1 — https://github.com/Genymobile/scrcpy
+  Copyright (C) 2018 Genymobile
+  Copyright (C) 2018-2025 Romain Vimont
+  Licensed under the Apache License, Version 2.0
+  https://www.apache.org/licenses/LICENSE-2.0
+  Shipped unmodified; it runs on the Android phone during a session.
+
+Android Debug Bridge (adb), Windows build only — Android SDK Platform-Tools
+  Copyright (C) The Android Open Source Project
+  Licensed under the Apache License, Version 2.0
+  Taken unmodified from the official scrcpy-win64-v3.3.1 bundle.
+
+UxPlay (optional, installed separately) — https://github.com/FDH2/UxPlay
+  Licensed under the GNU General Public License v3.0
+  Not shipped with this version of MansoMirror; started as a separate program if present.
