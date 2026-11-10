@@ -27,9 +27,15 @@ mkdir -p "$OUT/bin" "$OUT/lib/gstreamer-1.0" "$OUT/libexec/gstreamer-1.0"
 cp uxplay.exe "$OUT/bin/"
 cp /ucrt64/libexec/gstreamer-1.0/gst-plugin-scanner.exe "$OUT/libexec/gstreamer-1.0/"
 
-# Only the GStreamer plugins UxPlay's mirror/audio pipelines use.
-PLUGINS="coreelements app playback typefindfunctions videoparsersbad libav videoconvertscale videoconvert videoscale
-  autodetect d3d11 d3d12 audioconvert audioresample audioparsers volume wasapi wasapi2 directsoundsink isomp4"
+# Only the GStreamer plugins providing the elements UxPlay's pipelines use
+# (from UxPlay's renderers/ and uxplay.cpp): appsrc, queue, capsfilter, filesink,
+# h264parse/h265parse, decodebin/playbin, avdec_h264/aac/alac, aacparse,
+# videoconvert/videoscale, videoflip, imagefreeze, jpegdec, textoverlay,
+# fpsdisplaysink, audioconvert/audioresample, level, volume, auto*sink,
+# d3d11/d3d12 video sinks and decoders, wasapi/directsound audio sinks.
+PLUGINS="coreelements app playback typefindfunctions videoparsersbad libav audioparsers
+  videoconvertscale videoconvert videoscale videofilter imagefreeze jpeg pango debugutilsbad
+  audioconvert audioresample level volume autodetect d3d11 d3d12 wasapi wasapi2 directsound"
 for p in $PLUGINS; do
   f=/ucrt64/lib/gstreamer-1.0/libgst$p.dll
   if [ -f "$f" ]; then cp "$f" "$OUT/lib/gstreamer-1.0/"; fi
