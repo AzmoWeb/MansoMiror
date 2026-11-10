@@ -8,8 +8,8 @@
  * Windows UAC prompt, then the rule stays.
  */
 import { execFile } from "node:child_process";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join, win32 } from "node:path";
 
 export const RULE_NAME = "MansoMirror AirPlay";
 
@@ -20,32 +20,40 @@ type Run = (file: string, args: string[], env?: NodeJS.ProcessEnv) => Promise<{ 
 const run: Run = (file, args, env) =>
   new Promise((res) => {
     execFile(file, args, { windowsHide: true, env: env ?? process.env, timeout: 120_000 }, (err, stdout, stderr) => {
-      const code = err ? (typeof (err as { code?: unknown }).code === "number" ? ((err as { code: number }).code) : 1) : 0;
+      const code = err ? (typeof (err as { code?: unknown }).code === "number" ? (err as { code: number }).code : 1) : 0;
       res({ code, out: `${stdout}${stderr}` });
     });
   });
 
+const PS = ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"];
+
+/** Exit 0 when an enabled allow rule exists for exactly $env:MM_FW_BIN. */
+export const CHECK_PS =
+  "$ok = Get-NetFirewallApplicationFilter -ErrorAction SilentlyContinue | Where-Object { $_.Program -ieq $env:MM_FW_BIN } | " +
+  "Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' -and $_.Action -eq 'Allow' }; " +
+  "$block = Get-NetFirewallApplicationFilter -ErrorAction SilentlyContinue | Where-Object { $_.Program -ieq $env:MM_FW_BIN } | " +
+  "Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' -and $_.Action -eq 'Block' }; " +
+  "if ($ok -and -not $block) { exit 0 } else { exit 1 }";
+
 /** The batch file run elevated: removes any rule for the receiver (including a
- *  "block" rule Windows may have created) and adds one allow rule for it. */
-export function ruleScript(bin: string): string {
+ *  "block" rule Windows may have created) and adds one allow rule for it.
+ *  Its output goes to <script>.log so a failure can be reported. */
+export function ruleScript(bin: string, logFile: string): string {
   const p = bin.replace(/"/g, "");
+  const l = logFile.replace(/"/g, "");
   return [
     "@echo off",
     "chcp 65001 >nul",
-    `netsh advfirewall firewall delete rule name="${RULE_NAME}" >nul 2>&1`,
-    `netsh advfirewall firewall delete rule name=all program="${p}" >nul 2>&1`,
-    `netsh advfirewall firewall add rule name="${RULE_NAME}" dir=in action=allow program="${p}" enable=yes profile=any`,
+    `netsh advfirewall firewall delete rule name="${RULE_NAME}" > "${l}" 2>&1`,
+    `netsh advfirewall firewall delete rule name=all program="${p}" >> "${l}" 2>&1`,
+    `netsh advfirewall firewall add rule name="${RULE_NAME}" dir=in action=allow program="${p}" enable=yes profile=any >> "${l}" 2>&1`,
+    "exit /b %errorlevel%",
     "",
   ].join("\r\n");
 }
 
-/** True when an allow rule with our name exists for exactly this binary. */
-export function ruleMatches(netshOutput: string, bin: string): boolean {
-  return netshOutput.toLowerCase().includes(bin.toLowerCase());
-}
-
 export async function ensureFirewallRule(
-  bin: string,
+  binary: string,
   workDir: string,
   opts: { platform?: NodeJS.Platform; run?: Run; log?: (l: string) => void } = {},
 ): Promise<FirewallResult> {
@@ -53,28 +61,25 @@ export async function ensureFirewallRule(
   const exec = opts.run ?? run;
   const log = opts.log ?? (() => {});
   if (platform !== "win32") return "not-windows";
+  // Windows stores and compares the program path as written: always use backslashes.
+  const bin = win32.normalize(binary);
+  const env = { ...process.env, MM_FW_BIN: bin };
 
-  const check = async () => {
-    const r = await exec("netsh", ["advfirewall", "firewall", "show", "rule", `name=${RULE_NAME}`, "verbose"]);
-    return r.code === 0 && ruleMatches(r.out, bin);
-  };
+  const check = async () => (await exec("powershell.exe", [...PS, CHECK_PS], env)).code === 0;
   if (await check()) return "already";
 
   const script = join(workDir, "mansomirror-firewall.cmd");
-  writeFileSync(script, ruleScript(bin), "utf8");
+  const logFile = `${script}.log`;
+  writeFileSync(script, ruleScript(bin, logFile), "utf8");
   log("firewall: asking Windows for permission (UAC) to allow the AirPlay receiver");
   const r = await exec(
     "powershell.exe",
-    [
-      "-NoProfile",
-      "-NonInteractive",
-      "-Command",
-      "try { $p = Start-Process -FilePath $env:MM_FW_SCRIPT -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode } catch { exit 1223 }",
-    ],
-    { ...process.env, MM_FW_SCRIPT: script },
+    [...PS, "try { $p = Start-Process -FilePath $env:MM_FW_SCRIPT -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode } catch { exit 1223 }"],
+    { ...env, MM_FW_SCRIPT: script },
   );
   if (r.code === 1223) return "refused";
   if (await check()) return "added";
-  log(`firewall: rule not added (code ${r.code}) ${r.out.trim()}`);
+  const out = existsSync(logFile) ? readFileSync(logFile, "utf8").trim() : "";
+  log(`firewall: rule not added (code ${r.code}) ${r.out.trim()} ${out}`);
   return "failed";
 }
