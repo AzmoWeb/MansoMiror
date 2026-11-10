@@ -1,73 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
-import { PhoneScreen } from "../product/PhoneScreen";
-
-/** Phone → laptop illustration. The mirrored screen "forms" by sweeping out from the link axis. */
-function HeroIllustration() {
-  const reduce = useReducedMotion();
-  return (
-    <div className="relative mx-auto w-full max-w-[560px]" aria-hidden="true">
-      <div className="grid-paper absolute -inset-10 opacity-60" />
-      <div className="relative flex items-end gap-5 sm:gap-8">
-        {/* Laptop */}
-        <div className="flex-1">
-          <div className="rounded-t-[14px] border border-line-strong bg-[#1B1B19] p-[3.5%] shadow-lg">
-            <div className="relative aspect-[16/10] overflow-hidden rounded-[4px] bg-bg-subtle">
-              <div className="flex h-[9%] items-center gap-1 border-b border-line bg-raised px-[2%]">
-                <span className="size-1.5 rounded-full bg-line-strong" />
-                <span className="size-1.5 rounded-full bg-line-strong" />
-                <span className="size-1.5 rounded-full bg-line-strong" />
-                <span className="ml-auto inline-flex items-center gap-1 font-mono text-[9px] text-live-ink">
-                  <span className="live-dot size-1 rounded-full bg-live" /> EN DIRECT
-                </span>
-              </div>
-              <div className="grid h-[91%] place-items-center">
-                <motion.div
-                  className="h-[86%] overflow-hidden rounded-[9px] border-[3px] border-[#1B1B19] text-[7px]"
-                  style={{ aspectRatio: "9 / 19", originX: 1 }}
-                  initial={reduce ? false : { clipPath: "inset(0 0 0 100%)" }}
-                  animate={{ clipPath: "inset(0 0 0 0%)" }}
-                  transition={{ duration: 0.9, delay: 0.7, ease: [0.2, 0, 0, 1] }}
-                >
-                  <PhoneScreen />
-                </motion.div>
-              </div>
-            </div>
-          </div>
-          <div className="mx-[-4%] h-3 rounded-b-[10px] border border-t-0 border-line-strong bg-line" />
-        </div>
-
-        {/* Link axis */}
-        <div className="absolute bottom-[22%] left-[62%] right-[22%] hidden h-px bg-line-strong sm:block">
-          {!reduce &&
-            [0, 1, 2].map((i) => (
-              <motion.span
-                key={i}
-                className="absolute -top-[2px] size-[5px] rounded-full bg-accent"
-                initial={{ left: "100%", opacity: 0 }}
-                animate={{ left: "0%", opacity: [0, 1, 1, 0] }}
-                transition={{ duration: 1.6, delay: 0.4 + i * 0.53, repeat: Infinity, ease: "linear" }}
-              />
-            ))}
-        </div>
-
-        {/* Phone */}
-        <motion.div
-          className="w-[26%] shrink-0"
-          initial={reduce ? false : { y: 24, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: [0.2, 0, 0, 1] }}
-        >
-          <div className="overflow-hidden rounded-[20px] border-[5px] border-[#1B1B19] text-[9px] shadow-lg" style={{ aspectRatio: "9 / 19" }}>
-            <PhoneScreen />
-          </div>
-        </motion.div>
-      </div>
-    </div>
-  );
-}
+import { motion } from "motion/react";
+import { HeroScene } from "../product/HeroScene";
 
 export function Hero() {
   return (
@@ -113,7 +48,7 @@ export function Hero() {
           </motion.div>
           <p className="mt-5 text-sm text-subtle">En développement — bêta pour Windows, macOS et Linux ; application mobile à venir.</p>
         </div>
-        <HeroIllustration />
+        <HeroScene />
       </div>
     </section>
   );
