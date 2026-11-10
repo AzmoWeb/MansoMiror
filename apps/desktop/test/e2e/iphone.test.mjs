@@ -61,7 +61,7 @@ test("AirPlay receiver starts in in-app mode", { skip, timeout: 30_000 }, async 
 test("a mirrored stream shows the iPhone screen large in the window, then returns when it stops", { skip, timeout: 60_000 }, async () => {
   const { videoPort } = await page.evaluate(() => window.mm.airplayState());
   const tail = `config-interval=-1 ! rtph264depay ! h264parse config-interval=-1 ! video/x-h264,stream-format=byte-stream,alignment=au ! tcpclientsink host=127.0.0.1 port=${videoPort} sync=false`;
-  const pipeline = `videotestsrc is-live=true num-buffers=150 pattern=ball ! video/x-raw,width=640,height=1136,framerate=30/1 ! x264enc tune=zerolatency key-int-max=30 ! h264parse ! rtph264pay ${tail}`;
+  const pipeline = `videotestsrc is-live=true num-buffers=150 pattern=ball ! video/x-raw,width=640,height=1136,framerate=30/1 ! x264enc tune=zerolatency key-int-max=100000 ! h264parse ! rtph264pay ${tail}`;
   const gst = spawn("gst-launch-1.0", ["-q", ...pipeline.split(" ")], { stdio: process.env.MM_DEBUG ? "inherit" : "ignore" });
   if (process.env.MM_DEBUG) gst.on("exit", (c) => console.error("gst exit", c));
 

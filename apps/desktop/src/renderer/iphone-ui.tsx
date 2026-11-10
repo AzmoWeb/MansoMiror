@@ -18,9 +18,11 @@ export function IPhoneScreen({ name, onStop, onKill, toast }: { name: string; on
   const elapsed = useElapsed(since);
 
   useEffect(() => {
-    // The iPhone re-sends a key frame on its own; nothing to request here.
-    const d = new H264CanvasDecoder(canvas.current!, setStats, () => {});
+    // The iPhone sent its only key frame when mirroring started, before this
+    // screen existed: ask for it (and the frames since) again, then go live.
+    const d = new H264CanvasDecoder(canvas.current!, setStats, () => void mm.airplayVideoReplay(), (m) => void mm.diag(`iphone video: ${m}`));
     const off = mm.onAirPlayVideo((p) => d.push(p));
+    void mm.airplayVideoReplay();
     return () => {
       off();
       d.close();

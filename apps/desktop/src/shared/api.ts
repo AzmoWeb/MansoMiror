@@ -81,9 +81,13 @@ export interface MansoApi {
   airplayState(recheck?: boolean): Promise<AirPlayState>;
   airplayStart(): Promise<AirPlayState>;
   airplayStop(): Promise<void>;
+  /** Adds a line to main.log (video decoder diagnostics). */
+  diag(message: string): Promise<void>;
   /** Opens the folder with main.log and uxplay.log. */
   openLogs(): Promise<void>;
   onAirPlay(cb: (s: AirPlayState) => void): () => void;
+  /** Re-sends the last key frame (and the frames since) to onAirPlayVideo listeners. */
+  airplayVideoReplay(): Promise<void>;
   onAirPlayVideo(cb: (p: { config: boolean; key: boolean; pts: number; data: Uint8Array }) => void): () => void;
 
   /** Android: show and control a phone inside MansoMirror. */
@@ -134,7 +138,9 @@ export const IPC = {
   airplayStop: "mm:airplay:stop",
   airplayEvent: "mm:airplay:event",
   airplayVideo: "mm:airplay:video",
+  airplayReplay: "mm:airplay:replay",
   openLogs: "mm:logs:open",
+  diag: "mm:diag",
   androidStatus: "mm:android:status",
   androidDevices: "mm:android:devices",
   androidPair: "mm:android:pair",
