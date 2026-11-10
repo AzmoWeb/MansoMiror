@@ -12,6 +12,10 @@ Android Debug Bridge (adb), Windows build only — Android SDK Platform-Tools
   Licensed under the Apache License, Version 2.0
   Taken unmodified from the official scrcpy-win64-v3.3.1 bundle.
 
-UxPlay (optional, installed separately) — https://github.com/FDH2/UxPlay
+UxPlay — https://github.com/FDH2/UxPlay
   Licensed under the GNU General Public License v3.0
-  Not shipped with this version of MansoMirror; started as a separate program if present.
+  Windows: shipped in resources/uxplay (unmodified, built from commit
+  05b0275cb1b726592700e47a6e0307544b3d3a52; see resources/uxplay/SOURCE.txt and LICENSE-UxPlay.txt),
+  together with GStreamer and its plugins (LGPL-2.1+) from MSYS2.
+  macOS / Linux: installed separately by the user.
+  It runs as a separate program started by MansoMirror.

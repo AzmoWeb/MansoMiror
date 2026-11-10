@@ -32,6 +32,9 @@ win:
     - from: vendor/scrcpy
       to: scrcpy
       filter: ["adb.exe", "AdbWinApi.dll", "AdbWinUsbApi.dll"]
+    # AirPlay receiver runtime, built by scripts/build-uxplay-windows.sh in the release workflow.
+    - from: vendor/uxplay
+      to: uxplay
   target:
     - target: nsis
       arch: [x64]
@@ -68,4 +71,8 @@ mac:
   extendInfo:
     NSScreenCaptureUsageDescription: MansoMirror a besoin d'enregistrer l'écran pour le partager avec l'ordinateur que vous autorisez.
 
-publish: null
+# Update feed: the website re-publishes latest*.yml from the newest GitHub release
+# (scripts/fetch-releases.ts in apps/web), pointing at the GitHub download URLs.
+publish:
+  provider: generic
+  url: https://azmoweb.github.io/MansoMiror/updates

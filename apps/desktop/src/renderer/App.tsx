@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AirPlayState, AppInfo, CaptureSource, DiscoveredDevice, HistoryEntry, HostEvent, MansoApi, Settings } from "../shared/api.ts";
+import type { UpdateState, AirPlayState, AppInfo, CaptureSource, DiscoveredDevice, HistoryEntry, HostEvent, MansoApi, Settings } from "../shared/api.ts";
 import { errorText, type ErrorCode } from "../shared/protocol.ts";
 import { bitrateFor, captureScreen, createHost, createViewer, watchStats, type LiveStats } from "./webrtc.ts";
 import { Icon, LogoMark, Modal, Svg, Toasts, useCountdown, useElapsed, type Toast } from "./ui.tsx";
@@ -290,6 +290,7 @@ export function App() {
             </button>
           ))}
         </nav>
+        <UpdateBox />
         <div className="net">
           <p className="label">Réseau local</p>
           {info?.addresses.length ? (
@@ -894,6 +895,17 @@ function SettingsView({ settings, onChange, hostActive }: { settings: Settings; 
         <p className="muted small">Autorisez ce port dans le pare-feu de l'ordinateur qui partage son écran.</p>
       </section>
       <section>
+        <h2>Mises à jour</h2>
+        <label className="toggle">
+          <input type="checkbox" checked={settings.autoUpdate} onChange={(e) => void save({ autoUpdate: e.target.checked })} />
+          <span>Rechercher et télécharger les mises à jour automatiquement (au démarrage, puis toutes les heures)</span>
+        </label>
+        <p className="muted small">La nouvelle version s'installe au prochain redémarrage de MansoMirror, ou immédiatement si vous cliquez sur « Redémarrer ».</p>
+        <button className="btn ghost sm" onClick={() => void mm.updateCheck()}>
+          Rechercher maintenant
+        </button>
+      </section>
+      <section>
         <h2>Sécurité</h2>
         <p className="muted small">
           Chaque connexion exige un code à usage unique valable 2 minutes (5 essais au maximum), puis votre accord. Le flux est chiffré de bout en
@@ -902,4 +914,37 @@ function SettingsView({ settings, onChange, hostActive }: { settings: Settings; 
       </section>
     </div>
   );
+}
+
+/** Sidebar: update progress and the restart button. */
+function UpdateBox() {
+  const [st, setSt] = useState<UpdateState | null>(null);
+  useEffect(() => {
+    void mm.updateState().then(setSt);
+    return mm.onUpdate(setSt);
+  }, []);
+  if (!st) return null;
+  if (st.status === "downloading")
+    return (
+      <div className="update-box" role="status">
+        <p>Mise à jour {st.version}</p>
+        <div className="countdown">
+          <span style={{ width: `${st.percent}%` }} />
+        </div>
+        <p className="muted small">Téléchargement… {st.percent} %</p>
+      </div>
+    );
+  if (st.status === "ready")
+    return (
+      <div className="update-box ready" role="status" data-testid="update-ready">
+        <p>
+          <b>Version {st.version}</b> prête.
+        </p>
+        <button className="btn primary sm" onClick={() => void mm.updateInstall()}>
+          Redémarrer
+        </button>
+        <p className="muted small">Sinon, elle s'installera à la prochaine fermeture.</p>
+      </div>
+    );
+  return null;
 }

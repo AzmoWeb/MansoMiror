@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseSha256Sums, releasesFromGithub, type GithubRelease } from "../../src/content/github-releases.ts";
+import { parseSha256Sums, releasesFromGithub, rewriteUpdateFeed, type GithubRelease } from "../../src/content/github-releases.ts";
 import { isValidRelease, latestFiles } from "../../src/content/releases.ts";
 
 const H = (c: string) => c.repeat(64);
@@ -76,4 +76,24 @@ test("only the most recently published desktop release is used", () => {
   const older = { ...beta, tag_name: "desktop-v0.0.9", published_at: "2026-10-01T00:00:00Z" };
   const r = releasesFromGithub([older, beta], sums);
   assert.ok(r.every((x) => x.version === "0.1.0-beta.1"));
+});
+
+test("update feed: file names become absolute GitHub download URLs; hashes untouched", () => {
+  const feed = `version: 0.3.0
+files:
+  - url: MansoMirror-Setup-0.3.0-x64.exe
+    sha512: abc+/==
+    size: 120
+path: MansoMirror-Setup-0.3.0-x64.exe
+sha512: abc+/==
+releaseDate: '2026-11-10T12:17:41.271Z'
+`;
+  const base = "https://github.com/AzmoWeb/MansoMiror/releases/download/desktop-v0.3.0/";
+  const out = rewriteUpdateFeed(feed, base);
+  assert.match(out, /^  - url: https:\/\/github\.com\/AzmoWeb\/MansoMiror\/releases\/download\/desktop-v0\.3\.0\/MansoMirror-Setup-0\.3\.0-x64\.exe$/m);
+  assert.match(out, /^path: https:\/\/github\.com\/.+\/MansoMirror-Setup-0\.3\.0-x64\.exe$/m);
+  assert.match(out, /^sha512: abc\+\/==$/m);
+  assert.match(out, /^releaseDate: '2026-11-10T12:17:41.271Z'$/m);
+  assert.equal(rewriteUpdateFeed(out, base), out, "idempotent: absolute URLs are left alone");
+  assert.throws(() => rewriteUpdateFeed(feed, "http://insecure/"));
 });

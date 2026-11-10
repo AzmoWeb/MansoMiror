@@ -63,3 +63,17 @@ export function latestDesktopRelease(list: GithubRelease[]): GithubRelease | nul
   if (desktop.length === 0) return null;
   return desktop.reduce((a, b) => (Date.parse(b.published_at!) > Date.parse(a.published_at!) ? b : a));
 }
+
+/** Update feeds electron-updater reads (Windows / Linux AppImage). */
+export const UPDATE_FEEDS = ["latest.yml", "latest-linux.yml"] as const;
+
+/**
+ * Make an electron-builder update feed point at absolute download URLs, so it
+ * can be served from the website while the files stay on GitHub Releases.
+ * Only `url:` and `path:` values that are bare file names are rewritten.
+ */
+export function rewriteUpdateFeed(yml: string, downloadBase: string): string {
+  if (!/^https:\/\//.test(downloadBase)) throw new Error("download base must be https");
+  const base = downloadBase.replace(/\/$/, "");
+  return yml.replace(/^(\s*(?:-\s+)?(?:url|path):\s*)(['"]?)([^\s'"/]+)\2\s*$/gm, (_m, key, _q, file) => `${key}${base}/${encodeURIComponent(file)}`);
+}

@@ -3,8 +3,9 @@ import type { DiscoveredDevice } from "../main/discovery.ts";
 import type { AirPlayState } from "../main/airplay.ts";
 import type { AndroidDevice } from "../main/android.ts";
 import type { AndroidEvent, AndroidInput } from "../main/android-service.ts";
+import type { UpdateState } from "../main/updater.ts";
 
-export type { Settings, HistoryEntry, DiscoveredDevice, AirPlayState, AndroidDevice, AndroidEvent, AndroidInput };
+export type { Settings, HistoryEntry, DiscoveredDevice, AirPlayState, AndroidDevice, AndroidEvent, AndroidInput, UpdateState };
 
 export interface AndroidVideoPacket {
   serial: string;
@@ -92,6 +93,12 @@ export interface MansoApi {
   androidStop(serial: string): Promise<void>;
   onAndroidEvent(cb: (e: AndroidEvent) => void): () => void;
   onAndroidVideo(cb: (p: AndroidVideoPacket) => void): () => void;
+
+  /** Automatic updates. */
+  updateState(): Promise<UpdateState>;
+  updateCheck(): Promise<void>;
+  updateInstall(): Promise<boolean>;
+  onUpdate(cb: (s: UpdateState) => void): () => void;
 }
 
 export const IPC = {
@@ -132,4 +139,8 @@ export const IPC = {
   androidStop: "mm:android:stop",
   androidEvent: "mm:android:event",
   androidVideo: "mm:android:video",
+  updateState: "mm:update:state",
+  updateCheck: "mm:update:check",
+  updateInstall: "mm:update:install",
+  updateEvent: "mm:update:event",
 } as const;

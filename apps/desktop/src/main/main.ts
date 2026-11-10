@@ -9,6 +9,8 @@ import { Store } from "./store.ts";
 import { AirPlayReceiver, findUxPlay } from "./airplay.ts";
 import { AndroidBridge, findTool, isHostPort, isSerial } from "./android.ts";
 import { AndroidService, findScrcpyServer } from "./android-service.ts";
+import { autoUpdater } from "electron-updater";
+import { Updater, updateSupport, type UpdaterLike } from "./updater.ts";
 import { randomHex } from "./pairing.ts";
 import { IPC, type CaptureSource, type HostEvent, type ViewerEvent } from "../shared/api.ts";
 
@@ -65,6 +67,7 @@ const host = new HostServer(() => store.settings.deviceName);
 const viewer = new ViewerClient();
 const discovery = new Discovery();
 const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
+app.whenReady().then(() => (airplay.registryDir = app.getPath("userData")));
 airplay.on("state", (st) => win?.webContents.send(IPC.airplayEvent, st));
 
 // Test-only fake phone (see test/fixtures/fake-phone.mjs); ignored in packaged builds.
@@ -74,6 +77,11 @@ const android = new AndroidService(
   findScrcpyServer(process.env, process.resourcesPath, join(__dirname, "..")),
   fakePhonePort,
 );
+const updater = new Updater(
+  autoUpdater as unknown as UpdaterLike,
+  updateSupport({ packaged: app.isPackaged, platform: process.platform, appImage: process.env.APPIMAGE }),
+);
+updater.on("state", (st) => win?.webContents.send(IPC.updateEvent, st));
 const androidHistory = new Map<string, string>();
 android.on("event", (e) => {
   if (e.type === "meta") {
@@ -158,7 +166,12 @@ const str = (v: unknown, max: number): string => {
 function registerIpc() {
   handle(IPC.info, () => ({ version: app.getVersion(), platform: process.platform, deviceId, addresses: localAddresses() }));
   handle(IPC.getSettings, () => store.settings);
-  handle(IPC.setSettings, (patch) => store.updateSettings(patch));
+  handle(IPC.setSettings, (patch) => {
+    const st = store.updateSettings(patch);
+    if (st.autoUpdate) updater.start();
+    else updater.stop();
+    return st;
+  });
   handle(IPC.history, () => store.history);
   handle(IPC.clearHistory, () => store.clearHistory());
 
@@ -238,6 +251,10 @@ function registerIpc() {
   });
   handle(IPC.airplayStart, () => airplay.start(store.settings.deviceName));
   handle(IPC.airplayStop, () => airplay.stop());
+
+  handle(IPC.updateState, () => updater.state);
+  handle(IPC.updateCheck, () => updater.check());
+  handle(IPC.updateInstall, () => updater.installNow());
 
   handle(IPC.androidStatus, () => android.status());
   handle(IPC.androidDevices, () => android.devices());
@@ -341,6 +358,7 @@ app.whenReady().then(() => {
 
   registerIpc();
   createWindow();
+  if (store.settings.autoUpdate) updater.start();
 
   // Global kill switch, works even when the window is hidden behind others.
   globalShortcut.register("CommandOrControl+Alt+K", () => void killAll());

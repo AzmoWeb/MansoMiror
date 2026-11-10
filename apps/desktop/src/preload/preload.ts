@@ -49,6 +49,10 @@ const api: MansoApi = {
   androidStop: (serial) => invoke(IPC.androidStop, serial),
   onAndroidEvent: (cb) => listen(IPC.androidEvent, cb),
   onAndroidVideo: (cb) => listen(IPC.androidVideo, cb),
+  updateState: () => invoke(IPC.updateState),
+  updateCheck: () => invoke(IPC.updateCheck),
+  updateInstall: () => invoke(IPC.updateInstall),
+  onUpdate: (cb) => listen(IPC.updateEvent, cb),
 };
 
 contextBridge.exposeInMainWorld("mm", api);

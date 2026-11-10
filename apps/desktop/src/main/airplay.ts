@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
-import { delimiter, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { randomInt } from "node:crypto";
 import { cleanName } from "../shared/protocol.ts";
 
@@ -31,6 +31,7 @@ const BIN = process.platform === "win32" ? "uxplay.exe" : "uxplay";
 export function findUxPlay(env: NodeJS.ProcessEnv = process.env, resourcesPath?: string): string | null {
   const candidates = [
     env.MM_UXPLAY_PATH,
+    resourcesPath ? join(resourcesPath, "uxplay", "bin", BIN) : undefined, // runtime shipped in the Windows installer
     resourcesPath ? join(resourcesPath, "uxplay", BIN) : undefined,
     ...(env.PATH ?? "").split(delimiter).filter(Boolean).map((d) => join(d, BIN)),
     // Homebrew on macOS is often missing from the PATH of apps started from the Dock.
@@ -39,14 +40,35 @@ export function findUxPlay(env: NodeJS.ProcessEnv = process.env, resourcesPath?:
   return candidates.find((p): p is string => !!p && existsSync(p)) ?? null;
 }
 
-export function airplayArgs(name: string, pin: string): string[] {
+export function airplayArgs(name: string, pin: string, platform: NodeJS.Platform = process.platform): string[] {
   return [
     "-n", name,
     "-nh", // show exactly our name in the iPhone list
     "-pin", pin, // the iPhone must type this code
     "-reset", "5", // free the receiver if the iPhone disappears
     "-nohold", // a new (authenticated) client replaces a stale one
+    // UxPlay's Windows notes: d3d12 can crash on some drivers; d3d11 is the safe choice.
+    ...(platform === "win32" ? ["-vs", "d3d11videosink"] : []),
   ];
+}
+
+/**
+ * Environment for a self-contained UxPlay runtime (bin/, lib/gstreamer-1.0/,
+ * libexec/gstreamer-1.0/ side by side): use only its own GStreamer plugins.
+ */
+export function runtimeEnv(bin: string, base: NodeJS.ProcessEnv = process.env, registryDir?: string): NodeJS.ProcessEnv {
+  const root = dirname(dirname(bin));
+  const plugins = join(root, "lib", "gstreamer-1.0");
+  if (!existsSync(plugins)) return base;
+  const scanner = join(root, "libexec", "gstreamer-1.0", process.platform === "win32" ? "gst-plugin-scanner.exe" : "gst-plugin-scanner");
+  return {
+    ...base,
+    PATH: `${dirname(bin)}${delimiter}${base.PATH ?? ""}`,
+    GST_PLUGIN_PATH: plugins,
+    GST_PLUGIN_SYSTEM_PATH: plugins,
+    ...(existsSync(scanner) ? { GST_PLUGIN_SCANNER: scanner } : {}),
+    ...(registryDir ? { GST_REGISTRY: join(registryDir, "gst-registry.bin") } : {}),
+  };
 }
 
 export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
@@ -54,9 +76,13 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
   private state: AirPlayState = { status: "stopped" };
   private bin: string | null;
 
-  constructor(bin: string | null) {
+  /** Where GStreamer may cache its plugin registry (the app's user data folder). */
+  registryDir?: string;
+
+  constructor(bin: string | null, registryDir?: string) {
     super();
     this.bin = bin;
+    this.registryDir = registryDir;
     if (!bin) this.state = { status: "unavailable", reason: "not-installed" };
   }
 
@@ -81,7 +107,11 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
     if (this.proc) return this.state;
     const name = `${cleanName(deviceName)} · MansoMirror`.slice(0, 60);
     const pin = String(randomInt(0, 10_000)).padStart(4, "0");
-    const proc = spawn(this.bin, airplayArgs(name, pin), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    const proc = spawn(this.bin, airplayArgs(name, pin), {
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+      env: runtimeEnv(this.bin, process.env, this.registryDir),
+    });
     this.proc = proc;
     const onData = (buf: Buffer) => {
       for (const line of buf.toString().split(/\r?\n/)) if (line.trim()) this.emit("log", line.trim());
