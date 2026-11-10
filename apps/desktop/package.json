@@ -1,7 +1,7 @@
 {
   "name": "@mansomirror/desktop",
   "productName": "MansoMirror",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "description": "MansoMirror Desktop — partage d'écran sécurisé entre ordinateurs sur le réseau local.",
   "author": "Manso",

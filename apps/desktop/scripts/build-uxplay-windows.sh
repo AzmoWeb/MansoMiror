@@ -10,6 +10,7 @@ UXPLAY_REPO=https://github.com/FDH2/UxPlay
 UXPLAY_COMMIT=05b0275cb1b726592700e47a6e0307544b3d3a52 # 1.74 (pinned)
 OUT="$1"
 P=mingw-w64-ucrt-x86_64
+HERE="$(cd "$(dirname "$0")" && pwd)"
 
 pacman -S --noconfirm --needed git "$P-cmake" "$P-gcc" "$P-ninja" "$P-pkgconf" "$P-libplist" "$P-openssl" \
   "$P-gstreamer" "$P-gst-plugins-base" "$P-gst-plugins-good" "$P-gst-plugins-bad" "$P-gst-libav"
@@ -17,6 +18,9 @@ pacman -S --noconfirm --needed git "$P-cmake" "$P-gcc" "$P-ninja" "$P-pkgconf" "
 SRC=$(mktemp -d)
 git clone --quiet "$UXPLAY_REPO" "$SRC/UxPlay"
 git -C "$SRC/UxPlay" checkout --quiet "$UXPLAY_COMMIT"
+# Our change (GPL: shipped next to the binary): when no adapter passes UxPlay's
+# Windows filters, the mDNS announcement had no IPv4 address at all.
+git -C "$SRC/UxPlay" apply "$HERE/uxplay-windows-mdns-ip.patch"
 mkdir -p "$SRC/UxPlay/build"
 cd "$SRC/UxPlay/build"
 # NO_MARCH_NATIVE: by default UxPlay compiles with -march=native, i.e. for the
@@ -62,9 +66,10 @@ copy_deps() {
 for f in "$OUT"/bin/uxplay.exe "$OUT"/libexec/gstreamer-1.0/*.exe "$OUT"/lib/gstreamer-1.0/*.dll; do copy_deps "$f"; done
 
 cp "$SRC/UxPlay/LICENSE" "$OUT/LICENSE-UxPlay.txt"
+cp "$HERE/uxplay-windows-mdns-ip.patch" "$OUT/"
 cat > "$OUT/SOURCE.txt" <<EOF
 UxPlay — AirPlay mirroring server — GNU General Public License v3.0
-Source code: $UXPLAY_REPO (commit $UXPLAY_COMMIT)
+Source code: $UXPLAY_REPO (commit $UXPLAY_COMMIT), modified by uxplay-windows-mdns-ip.patch (in this folder)
 Built with MSYS2 UCRT64 by MansoMirror's release workflow (apps/desktop/scripts/build-uxplay-windows.sh).
 GStreamer and its plugins (LGPL-2.1+): https://gstreamer.freedesktop.org/src/ — MSYS2 packages: https://packages.msys2.org/
 EOF
