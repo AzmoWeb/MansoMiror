@@ -500,6 +500,16 @@ function AirPlayPanel() {
             <p className="live">
               <span className="dot live-dot" /> Visible par les iPhone et iPad du réseau
             </p>
+            {st.announced === null && (
+              <p className="error" role="alert">
+                Ce PC ne s'annonce pas sur le réseau : l'iPhone ne peut pas le voir. Ouvrez les journaux et envoyez-les au support.
+              </p>
+            )}
+            {st.announced && (
+              <p className="muted" data-testid="airplay-announced">
+                Annoncé sur le réseau à l'adresse {st.announced.join(", ") || "inconnue"}. L'iPhone doit être sur le même réseau (même box).
+              </p>
+            )}
             {st.notice && (
               <p className="error" role="alert">
                 {st.notice}
