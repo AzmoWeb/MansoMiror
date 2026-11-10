@@ -136,6 +136,7 @@ export const ControlType = {
   EXPAND_NOTIFICATION_PANEL: 5,
   SET_DISPLAY_POWER: 10,
   ROTATE_DEVICE: 11,
+  RESET_VIDEO: 17,
 } as const;
 
 export const MotionAction = { DOWN: 0, UP: 1, MOVE: 2 } as const;
@@ -228,4 +229,9 @@ export function backOrScreenOnMessage(action: number): Uint8Array {
 
 export function displayPowerMessage(on: boolean): Uint8Array {
   return Uint8Array.of(ControlType.SET_DISPLAY_POWER, on ? 1 : 0);
+}
+
+/** Ask the phone for a fresh key frame (e.g. after a decoder error). */
+export function resetVideoMessage(): Uint8Array {
+  return Uint8Array.of(ControlType.RESET_VIDEO);
 }

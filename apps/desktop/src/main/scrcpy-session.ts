@@ -65,7 +65,7 @@ async function connectReady(port: number, host = "127.0.0.1"): Promise<Socket> {
       };
       s.once("error", () => finish(false));
       s.once("close", () => finish(false));
-      s.once("data", (d) => {
+      s.once("data", (d: Buffer) => {
         if (d.length > 1) s.unshift(d.subarray(1)); // keep anything after the dummy byte
         finish(true);
       });
@@ -132,7 +132,7 @@ export class ScrcpySession extends EventEmitter<SessionEvents> {
       },
       (p) => this.emit("packet", p),
     );
-    video.on("data", (d) => {
+    video.on("data", (d: Buffer) => {
       try {
         demux.push(d);
       } catch (e) {
