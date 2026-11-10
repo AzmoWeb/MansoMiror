@@ -65,6 +65,7 @@ const host = new HostServer(() => store.settings.deviceName);
 const viewer = new ViewerClient();
 const discovery = new Discovery();
 const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
+app.whenReady().then(() => (airplay.registryDir = app.getPath("userData")));
 airplay.on("state", (st) => win?.webContents.send(IPC.airplayEvent, st));
 
 // Test-only fake phone (see test/fixtures/fake-phone.mjs); ignored in packaged builds.

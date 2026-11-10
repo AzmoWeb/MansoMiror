@@ -5,15 +5,38 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Bonjour, type Service } from "bonjour-service";
-import { AirPlayReceiver, airplayArgs, findUxPlay } from "../../src/main/airplay.ts";
+import { mkdirSync } from "node:fs";
+import { AirPlayReceiver, airplayArgs, findUxPlay, runtimeEnv } from "../../src/main/airplay.ts";
 
 test("arguments: exact name, mandatory 4-digit code, stale session reset", () => {
   const a = airplayArgs("PC-Salon · MansoMirror", "0427");
   assert.deepEqual(a.slice(0, 3), ["-n", "PC-Salon · MansoMirror", "-nh"]);
   assert.equal(a[a.indexOf("-pin") + 1], "0427");
   assert.ok(a.includes("-reset"));
+});
+
+test("Windows: Direct3D 11 video output; other systems keep UxPlay's default", () => {
+  const w = airplayArgs("PC", "1234", "win32");
+  assert.equal(w[w.indexOf("-vs") + 1], "d3d11videosink");
+  assert.ok(!airplayArgs("PC", "1234", "linux").includes("-vs"));
+});
+
+test("shipped runtime: found under resources/uxplay/bin and isolated to its own GStreamer plugins", () => {
+  const res = mkdtempSync(join(tmpdir(), "mm-res-"));
+  const bin = join(res, "uxplay", "bin", process.platform === "win32" ? "uxplay.exe" : "uxplay");
+  mkdirSync(dirname(bin), { recursive: true });
+  mkdirSync(join(res, "uxplay", "lib", "gstreamer-1.0"), { recursive: true });
+  writeFileSync(bin, "");
+  assert.equal(findUxPlay({ PATH: "" }, res), bin);
+  const env = runtimeEnv(bin, { PATH: "/usr/bin" }, "/data");
+  assert.equal(env.GST_PLUGIN_PATH, join(res, "uxplay", "lib", "gstreamer-1.0"));
+  assert.equal(env.GST_PLUGIN_SYSTEM_PATH, env.GST_PLUGIN_PATH);
+  assert.equal(env.GST_REGISTRY, join("/data", "gst-registry.bin"));
+  assert.ok(env.PATH!.startsWith(dirname(bin)));
+  // A system-wide UxPlay (no bundled plugins) keeps the normal environment.
+  assert.deepEqual(runtimeEnv("/usr/bin/uxplay", { PATH: "/usr/bin" }), { PATH: "/usr/bin" });
 });
 
 test("findUxPlay: explicit path wins, otherwise searched on PATH, null when absent", () => {

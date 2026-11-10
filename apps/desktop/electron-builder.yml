@@ -32,6 +32,9 @@ win:
     - from: vendor/scrcpy
       to: scrcpy
       filter: ["adb.exe", "AdbWinApi.dll", "AdbWinUsbApi.dll"]
+    # AirPlay receiver runtime, built by scripts/build-uxplay-windows.sh in the release workflow.
+    - from: vendor/uxplay
+      to: uxplay
   target:
     - target: nsis
       arch: [x64]

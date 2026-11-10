@@ -49,6 +49,34 @@ jobs:
         run: node apps/desktop/node_modules/electron/install.js
       - name: Unit tests
         run: pnpm --filter @mansomirror/desktop test
+      - name: Set up MSYS2 (Windows AirPlay receiver)
+        if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+      - name: Build UxPlay and collect its runtime (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: bash apps/desktop/scripts/build-uxplay-windows.sh "$(cygpath -u "$GITHUB_WORKSPACE")/apps/desktop/vendor/uxplay"
+      - name: Check the bundled AirPlay receiver starts on its own (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $root = Join-Path $PWD "apps/desktop/vendor/uxplay"
+          $env:GST_PLUGIN_PATH = "$root/lib/gstreamer-1.0"
+          $env:GST_PLUGIN_SYSTEM_PATH = $env:GST_PLUGIN_PATH
+          $env:GST_PLUGIN_SCANNER = "$root/libexec/gstreamer-1.0/gst-plugin-scanner.exe"
+          # Only Windows itself + the bundled DLLs: proves the runtime is self-contained.
+          $env:PATH = "$root/bin;C:\Windows\System32;C:\Windows"
+          $p = Start-Process -FilePath "$root/bin/uxplay.exe" -ArgumentList "-n","CI-check","-nh","-vs","d3d11videosink" `
+            -RedirectStandardOutput out.txt -RedirectStandardError err.txt -PassThru -NoNewWindow
+          Start-Sleep -Seconds 10
+          $log = (Get-Content out.txt -Raw) + (Get-Content err.txt -Raw)
+          Write-Output $log
+          if ($p.HasExited) { throw "uxplay.exe exited early (code $($p.ExitCode))" }
+          Stop-Process -Id $p.Id -Force
+          if ($log -match "not found") { throw "A required GStreamer plugin is missing" }
       - name: Build installers
         working-directory: apps/desktop
         env:
