@@ -164,3 +164,9 @@ input.port { width: 84px; }
 .android-nav { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px; border-radius: 999px; background: rgba(255,255,255,.08); box-shadow: 0 0 0 1px rgba(255,255,255,.1); }
 .android-nav button { display: grid; place-items: center; width: 44px; height: 36px; border: 0; border-radius: 999px; background: none; color: #f5f5f3; }
 .android-nav button:hover { background: rgba(255,255,255,.12); }
+
+/* Updates */
+.update-box { margin: 0 4px; padding: 12px; border-radius: var(--mm-radius-md); background: var(--mm-surface); border: 1px solid var(--mm-border); }
+.update-box p { margin: 0 0 6px; }
+.update-box.ready { border-color: var(--mm-accent); }
+.update-box .countdown { margin: 6px 0; }

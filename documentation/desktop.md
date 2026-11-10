@@ -48,11 +48,23 @@ contrôle → **Recopie de l'écran** → choisir « *nom de l'ordinateur* · Ma
 - Sécurité : code à 4 chiffres tiré au hasard à chaque activation ; la réception s'arrête avec « Tout couper ».
 - Testé : l'ordinateur s'annonce bien sur le réseau comme récepteur AirPlay (`_airplay._tcp`) sous le bon nom
   (test automatique avec le vrai UxPlay). **Pas encore testé avec un vrai iPhone** (aucun iPhone dans l'environnement de test).
-- Installation actuelle : UxPlay doit être installé à part (Linux : `sudo apt install uxplay gstreamer1.0-plugins-bad
-  gstreamer1.0-libav` ; macOS : `brew install uxplay`). **Windows : intégration à l'installeur à venir** (UxPlay, GStreamer
-  et le service Bonjour d'Apple sont nécessaires).
+- **Windows : UxPlay 1.74 est inclus dans l'installeur** (compilé par le workflow de publication avec MSYS2, avec les
+  modules GStreamer nécessaires ; sa découverte réseau intégrée rend Bonjour inutile). Au premier lancement, autorisez
+  `uxplay.exe` dans le pare-feu Windows (réseaux privés).
+- Linux : `sudo apt install uxplay gstreamer1.0-plugins-bad gstreamer1.0-libav` ; macOS : `brew install uxplay`.
 - AirPlay est un protocole Apple non documenté publiquement : UxPlay en est une réimplémentation ; une mise à jour d'iOS
   peut nécessiter une mise à jour d'UxPlay. Distribuer UxPlay avec l'application impose de fournir son code source (GPL-3.0).
+
+## Mises à jour automatiques
+
+Windows (installeur) et Linux (AppImage) : MansoMirror vérifie au démarrage puis toutes les heures
+(réglage « Mises à jour » dans les paramètres). La nouvelle version est téléchargée en arrière-plan, son empreinte
+SHA-512 est vérifiée, puis elle s'installe à la fermeture de l'application ou immédiatement avec « Redémarrer ».
+
+- Flux : `https://azmoweb.github.io/MansoMiror/updates/latest.yml` (Windows) et `latest-linux.yml`, republiés par le
+  site à partir de la dernière version GitHub (les fichiers restent hébergés sur GitHub Releases).
+- macOS : pas encore (une application signée est nécessaire) ; téléchargement manuel depuis le site.
+- Les versions 0.1 et 0.2 n'avaient pas cette fonction : installez la 0.3 une fois à la main, les suivantes arriveront seules.
 
 ## Ce qu'elle ne fait pas encore
 

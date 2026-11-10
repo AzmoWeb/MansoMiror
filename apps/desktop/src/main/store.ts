@@ -10,6 +10,7 @@ export interface Settings {
   fps: 30 | 60;
   port: number;
   discoverable: boolean;
+  autoUpdate: boolean;
 }
 
 export interface HistoryEntry {
@@ -29,6 +30,7 @@ export const defaultSettings = (): Settings => ({
   fps: 30,
   port: 47800,
   discoverable: true,
+  autoUpdate: true,
 });
 
 const MAX_HISTORY = 200;
@@ -44,6 +46,7 @@ export function sanitizeSettings(input: unknown, base: Settings): Settings {
   if (i.fps === 30 || i.fps === 60) s.fps = i.fps;
   if (Number.isInteger(i.port) && (i.port as number) >= 1024 && (i.port as number) <= 65535) s.port = i.port as number;
   if (typeof i.discoverable === "boolean") s.discoverable = i.discoverable;
+  if (typeof i.autoUpdate === "boolean") s.autoUpdate = i.autoUpdate;
   return s;
 }
 
