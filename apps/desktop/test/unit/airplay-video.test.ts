@@ -82,3 +82,24 @@ test(
     assert.deepEqual(states, [true, false]);
   },
 );
+
+test("GopCache: replays the last SPS/PPS, key frame and the frames since (the iPhone sends one key frame)", async () => {
+  const { GopCache } = await import("../../src/main/airplay-video.ts");
+  const c = new GopCache(4, 1 << 20);
+  const pk = (config: boolean, key: boolean, n: number) => ({ config, key, pts: n, data: new Uint8Array([n]) });
+  assert.deepEqual(c.snapshot(), []);
+  c.push(pk(false, false, 0)); // delta before any key frame: useless
+  c.push(pk(true, false, 1));
+  assert.deepEqual(c.snapshot(), [], "nothing to show without a key frame");
+  c.push(pk(false, true, 2));
+  c.push(pk(false, false, 3));
+  assert.deepEqual(c.snapshot().map((p) => p.pts), [1, 2, 3]);
+  c.push(pk(false, false, 4));
+  c.push(pk(false, false, 5));
+  c.push(pk(false, false, 6)); // over the limit: stops growing, keeps the key frame
+  assert.deepEqual(c.snapshot().map((p) => p.pts), [1, 2, 3, 4, 5]);
+  c.push(pk(false, true, 7)); // new key frame starts a new group
+  assert.deepEqual(c.snapshot().map((p) => p.pts), [1, 7]);
+  c.clear();
+  assert.deepEqual(c.snapshot(), []);
+});

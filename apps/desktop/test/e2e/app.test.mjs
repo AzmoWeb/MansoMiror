@@ -50,9 +50,9 @@ test("renderer is isolated: no Node, only the narrow API", { timeout: 60_000 }, 
   assert.equal(r.process, "undefined");
   // Exact allow-list: exposing a new function to the page must be a deliberate change here.
   assert.deepEqual(r.api, [
-    "airplayStart", "airplayState", "airplayStop",
+    "airplayStart", "airplayState", "airplayStop", "airplayVideoReplay",
     "androidConnect", "androidDevices", "androidInput", "androidPair", "androidStart", "androidStatus", "androidStop",
-    "clearHistory", "discoverStart", "discoverStop", "getSettings", "history",
+    "clearHistory", "diag", "discoverStart", "discoverStop", "getSettings", "history",
     "hostAccept", "hostEndSession", "hostNewPin", "hostRefuse", "hostStart", "hostStop",
     "info", "killAll", "listSources",
     "onAirPlay", "onAirPlayVideo", "onAndroidEvent", "onAndroidVideo", "onDevices", "onHostEvent", "onKilled", "onUpdate", "onViewerEvent", "openLogs",

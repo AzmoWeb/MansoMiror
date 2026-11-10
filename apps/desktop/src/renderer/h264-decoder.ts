@@ -37,9 +37,13 @@ export class H264CanvasDecoder {
   private ctx: CanvasRenderingContext2D;
   private onStats: (s: DecoderStats) => void;
   private onNeedKeyFrame: () => void;
+  private log: (msg: string) => void;
+  private accel: HardwareAcceleration = "no-preference";
+  private errors = 0;
   stats: DecoderStats = { width: 0, height: 0, fps: 0, decoded: 0 };
 
-  constructor(canvas: HTMLCanvasElement, onStats: (s: DecoderStats) => void, onNeedKeyFrame: () => void) {
+  constructor(canvas: HTMLCanvasElement, onStats: (s: DecoderStats) => void, onNeedKeyFrame: () => void, log: (msg: string) => void = () => {}) {
+    this.log = log;
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d", { alpha: false })!;
     this.onStats = onStats;
@@ -55,6 +59,7 @@ export class H264CanvasDecoder {
     }
     this.ctx.drawImage(frame, 0, 0, w, h);
     frame.close();
+    if (this.stats.decoded === 0) this.log(`first frame ${w}x${h} (${this.accel})`);
     this.frames++;
     this.stats.decoded++;
     const now = performance.now();
@@ -71,21 +76,32 @@ export class H264CanvasDecoder {
 
   private configure(config: Uint8Array) {
     const codec = codecFromConfig(config);
-    if (!codec) return;
+    if (!codec) {
+      this.log("config without SPS");
+      return;
+    }
     this.decoder?.close();
-    this.decoder = new VideoDecoder({
+    const accel = this.accel;
+    const decoder = new VideoDecoder({
       output: (f) => this.draw(f),
       error: (e) => {
+        this.errors++;
+        this.log(`decoder error (${codec}, ${accel}): ${e?.message}`);
         console.error("decoder error", e?.message);
+        if (this.decoder !== decoder) return;
+        // A hardware decoder that refuses the stream: retry in software.
+        if (this.accel !== "prefer-software" && this.stats.decoded === 0) this.accel = "prefer-software";
         // Corrupted state: wait for a fresh key frame.
         this.needKey = true;
         this.decoder = null;
-        if (this.config) this.configure(this.config);
+        if (this.config && this.errors < 20) this.configure(this.config);
         this.onNeedKeyFrame();
       },
     });
+    this.decoder = decoder;
+    this.log(`configure ${codec} (${accel})`);
     // No `description`: chunks are fed in Annex-B form.
-    this.decoder.configure({ codec, optimizeForLatency: true, hardwareAcceleration: "no-preference" });
+    decoder.configure({ codec, optimizeForLatency: true, hardwareAcceleration: accel });
     this.needKey = true;
   }
 

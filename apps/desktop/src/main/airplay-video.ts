@@ -203,3 +203,56 @@ export class AirPlayVideoServer extends EventEmitter<VideoServerEvents> {
     if (s) await new Promise<void>((r) => s.close(() => r()));
   }
 }
+
+/**
+ * Keeps what a decoder needs to start showing the picture right now: the last
+ * SPS/PPS, the last key frame and every frame since. The iPhone only sends a
+ * key frame when mirroring starts (and rarely afterwards), so a screen opened
+ * a moment later would otherwise stay black.
+ */
+export class GopCache {
+  private config: H264Packet | null = null;
+  private gop: H264Packet[] = [];
+  private bytes = 0;
+  private full = false;
+  private maxPackets: number;
+  private maxBytes: number;
+
+  constructor(maxPackets = 900, maxBytes = 48 * 1024 * 1024) {
+    this.maxPackets = maxPackets;
+    this.maxBytes = maxBytes;
+  }
+
+  push(p: H264Packet) {
+    if (p.config) {
+      this.config = p;
+      return;
+    }
+    if (p.key) {
+      this.gop = [p];
+      this.bytes = p.data.length;
+      this.full = false;
+      return;
+    }
+    if (!this.gop.length || this.full) return;
+    if (this.gop.length >= this.maxPackets || this.bytes + p.data.length > this.maxBytes) {
+      // Too long without a key frame: keep the key frame, stop growing.
+      this.full = true;
+      return;
+    }
+    this.gop.push(p);
+    this.bytes += p.data.length;
+  }
+
+  /** Packets to replay, in decoding order (empty until a config and a key frame were seen). */
+  snapshot(): H264Packet[] {
+    return this.config && this.gop.length ? [this.config, ...this.gop] : [];
+  }
+
+  clear() {
+    this.config = null;
+    this.gop = [];
+    this.bytes = 0;
+    this.full = false;
+  }
+}

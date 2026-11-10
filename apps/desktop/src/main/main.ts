@@ -10,6 +10,7 @@ import { Discovery, localAddresses } from "./discovery.ts";
 import { Store } from "./store.ts";
 import { AirPlayReceiver, findUxPlay } from "./airplay.ts";
 import { ensureFirewallRule } from "./firewall.ts";
+import { GopCache } from "./airplay-video.ts";
 import { AndroidBridge, findTool, isHostPort, isSerial } from "./android.ts";
 import { AndroidService, findScrcpyServer } from "./android-service.ts";
 import { autoUpdater } from "electron-updater";
@@ -114,7 +115,9 @@ async function selfCheckAirPlay(name: string) {
 
 const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
 app.whenReady().then(() => (airplay.registryDir = app.getPath("userData")));
+const airplayGop = new GopCache();
 airplay.on("state", (st) => {
+  if (st.status !== "running") airplayGop.clear();
   logLine(`airplay ${st.status}${st.status === "error" ? `: ${st.message}` : st.status === "running" ? ` inApp=${st.inApp} streaming=${st.streaming}` : ""}`);
   win?.webContents.send(IPC.airplayEvent, st);
 });
@@ -126,7 +129,22 @@ airplay.on("log", (line) => {
     appendFileSync(join(dir, "uxplay.log"), `${new Date().toISOString()} ${line}\n`);
   } catch {}
 });
-airplay.on("video", (p) => win?.webContents.send(IPC.airplayVideo, p));
+let videoCount = { packets: 0, keys: 0, configs: 0, at: 0 };
+airplay.on("video", (p) => {
+  airplayGop.push(p);
+  videoCount.packets++;
+  if (p.key) videoCount.keys++;
+  if (p.config) {
+    videoCount.configs++;
+    const sps = p.data.subarray(4, 8);
+    logLine(`airplay video: config SPS ${Buffer.from(sps).toString("hex")} (${p.data.length} bytes)`);
+  }
+  if (Date.now() - videoCount.at > 10_000) {
+    logLine(`airplay video: ${videoCount.packets} packets, ${videoCount.keys} key frames, ${videoCount.configs} configs so far`);
+    videoCount.at = Date.now();
+  }
+  win?.webContents.send(IPC.airplayVideo, p);
+});
 
 // Test-only fake phone (see test/fixtures/fake-phone.mjs); ignored in packaged builds.
 const fakePhonePort = !app.isPackaged && process.env.MM_ANDROID_FAKE_PORT ? Number(process.env.MM_ANDROID_FAKE_PORT) : null;
@@ -336,12 +354,19 @@ function registerIpc() {
       return { status: "error", message: `Démarrage impossible : ${(e as Error).message}` };
     }
   });
+  handle(IPC.diag, (m) => {
+    if (typeof m === "string") logLine(m.replace(/[\r\n]+/g, " ").slice(0, 300));
+  });
   handle(IPC.openLogs, async () => {
     const dir = join(app.getPath("userData"), "logs");
     mkdirSync(dir, { recursive: true });
     await shell.openPath(dir);
   });
   handle(IPC.airplayStop, () => airplay.stop());
+  // The iPhone screen just opened: send it the last key frame and what followed.
+  handle(IPC.airplayReplay, () => {
+    for (const p of airplayGop.snapshot()) win?.webContents.send(IPC.airplayVideo, p);
+  });
 
   handle(IPC.updateState, () => updater.state);
   handle(IPC.updateCheck, () => updater.check());
