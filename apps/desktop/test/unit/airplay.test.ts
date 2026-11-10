@@ -33,8 +33,11 @@ test("without UxPlay the receiver reports itself unavailable and start() is a no
 });
 
 const uxplay = findUxPlay();
+// UxPlay opens a video window: on Linux it needs a display (run under Xvfb in CI).
+const noDisplay = process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
+const skipReal = !uxplay ? "UxPlay not installed" : noDisplay ? "no display (run under xvfb-run)" : false;
 
-test("real UxPlay: announced as an AirPlay receiver under our name, then stopped", { skip: !uxplay && "UxPlay not installed", timeout: 30_000 }, async () => {
+test("real UxPlay: announced as an AirPlay receiver under our name, then stopped", { skip: skipReal, timeout: 30_000 }, async () => {
   const r = new AirPlayReceiver(uxplay);
   const logs: string[] = [];
   r.on("log", (l) => logs.push(l));
