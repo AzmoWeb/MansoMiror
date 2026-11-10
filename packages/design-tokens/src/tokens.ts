@@ -8,20 +8,21 @@
 
 /** Raw palette. Apps should prefer the semantic `themes` below. */
 export const palette = {
-  /** "Lagoon" — the MansoMirror brand colour. A deep teal: calm, technical, not the usual SaaS indigo. */
-  lagoon: {
-    50: "#ECFBF7",
-    100: "#CFF5EA",
-    200: "#9FEAD6",
-    300: "#62D7BD",
-    400: "#2CBFA2",
-    500: "#0FA487",
-    600: "#08846E",
-    700: "#0A6A5A",
-    800: "#0C544A",
-    900: "#0D453D",
-    950: "#032823",
+  /** "Cobalt" — the MansoMirror brand colour. A deep, saturated blue: crisp on white and on near-black. */
+  cobalt: {
+    50: "#EEF2FF",
+    100: "#DDE5FF",
+    200: "#C0CEFF",
+    300: "#9CB1FF",
+    400: "#7B98FF",
+    500: "#5577F5",
+    600: "#3A5BE8",
+    700: "#2448D8",
+    800: "#1E3BB2",
+    900: "#1C338C",
+    950: "#0E1A4D",
   },
+
   /** Warm graphite neutrals — slightly warm so white UIs do not feel clinical. */
   graphite: {
     0: "#FFFFFF",
@@ -88,18 +89,18 @@ export const themes: Record<ThemeName, SemanticColors> = {
     text: palette.graphite[900],
     textMuted: palette.graphite[600],
     textSubtle: palette.graphite[500],
-    accent: palette.lagoon[700],
-    accentHover: palette.lagoon[800],
-    accentText: palette.lagoon[700],
+    accent: palette.cobalt[700],
+    accentHover: palette.cobalt[800],
+    accentText: palette.cobalt[700],
     onAccent: palette.graphite[0],
-    accentSoft: palette.lagoon[50],
+    accentSoft: palette.cobalt[50],
     live: palette.signal[500],
     liveText: palette.signal[700],
     danger: palette.signal[600],
     dangerText: palette.signal[700],
     warningText: palette.amber[700],
     successText: palette.green[700],
-    focusRing: palette.lagoon[500],
+    focusRing: palette.cobalt[500],
   },
   dark: {
     bg: palette.graphite[950],
@@ -111,18 +112,18 @@ export const themes: Record<ThemeName, SemanticColors> = {
     text: palette.graphite[50],
     textMuted: palette.graphite[300],
     textSubtle: palette.graphite[400],
-    accent: palette.lagoon[400],
-    accentHover: palette.lagoon[300],
-    accentText: palette.lagoon[300],
-    onAccent: palette.lagoon[950],
-    accentSoft: palette.lagoon[950],
+    accent: palette.cobalt[400],
+    accentHover: palette.cobalt[300],
+    accentText: palette.cobalt[300],
+    onAccent: palette.cobalt[950],
+    accentSoft: palette.cobalt[950],
     live: palette.signal[400],
     liveText: palette.signal[300],
     danger: palette.signal[400],
     dangerText: palette.signal[300],
     warningText: palette.amber[300],
     successText: palette.green[300],
-    focusRing: palette.lagoon[300],
+    focusRing: palette.cobalt[300],
   },
 };
 

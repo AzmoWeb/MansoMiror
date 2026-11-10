@@ -8,7 +8,7 @@ instrument (axes, alignements, reflets) plutôt que l'esthétique « IA / néon 
 ## Logo
 
 `brand/logo-mark.svg` — un **M** tracé en un seul geste puis réfléchi autour d'un axe vertical fin.
-La moitié gauche (blanche) est l'appareil source ; la moitié droite (vert d'eau clair) est son
+La moitié gauche (blanche) est l'appareil source ; la moitié droite (bleu pâle) est son
 reflet ; l'axe central est le lien entre les deux. Le motif reste lisible à 16 px.
 
 | Fichier | Usage |
@@ -25,8 +25,8 @@ le symbole en dehors des couleurs de la palette.
 
 Source unique : `packages/design-tokens/src/tokens.ts`.
 
-- **Lagoon** (`#0A6A5A` en clair, `#2CBFA2` en sombre) : couleur de marque. Un sarcelle profond,
-  rarement utilisé dans ce marché (où dominent bleus et violets).
+- **Cobalt** (`#2448D8` en clair, `#7B98FF` en sombre) : couleur de marque. Un bleu profond et saturé,
+  net sur fond blanc comme sur fond quasi noir. (Remplace le vert « Lagoon » des premières versions.)
 - **Graphite** : neutres légèrement chauds. Fond blanc ou `#111110` ; aucun noir pur.
 - **Signal** (`#F2552F`) : réservé à l'état « en direct / enregistrement » et aux actions destructives.
   Il ne sert jamais à la décoration : quand il apparaît, c'est que quelque chose est transmis.
