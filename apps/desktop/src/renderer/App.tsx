@@ -3,6 +3,8 @@ import type { AirPlayState, AppInfo, CaptureSource, DiscoveredDevice, HistoryEnt
 import { errorText, type ErrorCode } from "../shared/protocol.ts";
 import { bitrateFor, captureScreen, createHost, createViewer, watchStats, type LiveStats } from "./webrtc.ts";
 import { Icon, LogoMark, Modal, Svg, Toasts, useCountdown, useElapsed, type Toast } from "./ui.tsx";
+import { AndroidPanel, AndroidScreen } from "./android-ui.tsx";
+import type { AndroidDevice } from "../shared/api.ts";
 
 declare global {
   interface Window {
@@ -202,6 +204,7 @@ export function App() {
         setPeerRecording(false);
         setHost({ s: "idle" });
         setViewer({ s: "idle" });
+        setAndroidDevice(null);
         toast("Toutes les connexions ont été coupées.", "ok");
       }),
     [toast, stopHostMedia],
@@ -229,6 +232,7 @@ export function App() {
     setViewer({ s: "watching", hostName: res.hostName, stream: await stream, since: Date.now() });
   }
 
+  const [androidDevice, setAndroidDevice] = useState<AndroidDevice | null>(null);
   const [airplayOn, setAirplayOn] = useState(false);
   useEffect(() => {
     void mm.airplayState().then((st) => setAirplayOn(st.status === "running"));
@@ -236,6 +240,23 @@ export function App() {
   }, []);
 
   const active = host.s === "waiting" || host.s === "sharing" || viewer.s === "watching" || airplayOn;
+
+  if (androidDevice) {
+    return (
+      <>
+        <AndroidScreen
+          device={androidDevice}
+          toast={toast}
+          onKill={() => void mm.killAll()}
+          onClose={(reason) => {
+            setAndroidDevice(null);
+            if (reason) toast(reason);
+          }}
+        />
+        <Toasts items={toasts} />
+      </>
+    );
+  }
 
   if (viewer.s === "watching") {
     return (
@@ -307,6 +328,7 @@ export function App() {
             onNewPin={() => void newPin()}
             onStopShare={() => void stopSharing()}
             onConnectTo={(target) => setViewer({ s: "pin", target })}
+            onOpenAndroid={setAndroidDevice}
             settings={settings}
           />
         )}
@@ -336,6 +358,7 @@ function DevicesView(props: {
   onNewPin: () => void;
   onStopShare: () => void;
   onConnectTo: (t: { name: string; host: string; port: number }) => void;
+  onOpenAndroid: (d: AndroidDevice) => void;
 }) {
   const { host } = props;
   return (
@@ -367,6 +390,7 @@ function DevicesView(props: {
         <ManualConnect defaultPort={props.settings.port} onConnect={props.onConnectTo} />
       </section>
 
+      <AndroidPanel onOpen={props.onOpenAndroid} />
       <AirPlayPanel />
     </div>
   );
@@ -389,7 +413,7 @@ function AirPlayPanel() {
   if (!st) return null;
 
   return (
-    <section className="panel wide" aria-labelledby="airplay-title" data-testid="airplay">
+    <section className="panel" aria-labelledby="airplay-title" data-testid="airplay">
       <div className="panel-head">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="7" y="2" width="10" height="20" rx="2.5" />
