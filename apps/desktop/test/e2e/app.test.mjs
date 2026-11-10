@@ -48,7 +48,16 @@ test("renderer is isolated: no Node, only the narrow API", { timeout: 60_000 }, 
   }));
   assert.equal(r.require, "undefined");
   assert.equal(r.process, "undefined");
-  assert.ok(r.api.includes("killAll") && r.api.length === 28, `api: ${r.api}`);
+  // Exact allow-list: exposing a new function to the page must be a deliberate change here.
+  assert.deepEqual(r.api, [
+    "airplayStart", "airplayState", "airplayStop",
+    "androidConnect", "androidDevices", "androidInput", "androidPair", "androidStart", "androidStatus", "androidStop",
+    "clearHistory", "discoverStart", "discoverStop", "getSettings", "history",
+    "hostAccept", "hostEndSession", "hostNewPin", "hostRefuse", "hostStart", "hostStop",
+    "info", "killAll", "listSources",
+    "onAirPlay", "onAndroidEvent", "onAndroidVideo", "onDevices", "onHostEvent", "onKilled", "onViewerEvent",
+    "saveFile", "selectSource", "setSettings", "viewerConnect", "viewerDisconnect", "viewerSetRecording",
+  ]);
   assert.equal(r.popup, true);
 });
 
