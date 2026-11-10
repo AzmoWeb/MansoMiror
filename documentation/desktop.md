@@ -79,9 +79,13 @@ pnpm --filter @mansomirror/desktop dist --win     # .exe NSIS (sur Windows)
 pnpm --filter @mansomirror/desktop dist --mac     # .dmg (sur macOS)
 ```
 
-Publication : pousser un tag `desktop-vX.Y.Z[-beta.N]` déclenche `.github/workflows/release-desktop.yml`, qui compile sur
-Windows, macOS et Linux et publie une pré-version GitHub avec `SHA256SUMS.txt`. Ensuite, ajouter les fichiers à
-`apps/web/src/content/releases.ts` pour qu'ils apparaissent sur le site.
+Publication, au choix :
+- onglet **Actions** → **Release desktop** → **Run workflow**, version `X.Y.Z[-beta.N]`, case **publish** cochée ;
+- ou pousser un tag `desktop-vX.Y.Z[-beta.N]`.
+
+Le workflow compile sur de vrais Windows, macOS et Linux, publie une pré-version GitHub avec `SHA256SUMS.txt`, puis
+relance la mise en ligne du site. Au moment de sa construction, le site lit la dernière version publiée
+(`apps/web/scripts/fetch-releases.ts`) : seuls les fichiers dont l'empreinte figure dans `SHA256SUMS.txt` sont proposés.
 
 **Signature** : aucune pour l'instant. Pour la supprimer les avertissements :
 - Windows : certificat de signature de code (OV ou EV) → variables `CSC_LINK` / `CSC_KEY_PASSWORD` dans les secrets GitHub ;

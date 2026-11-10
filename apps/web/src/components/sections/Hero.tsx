@@ -111,7 +111,7 @@ export function Hero() {
               Découvrir MansoMirror
             </Link>
           </motion.div>
-          <p className="mt-5 text-sm text-subtle">En développement — première version prévue pour Windows, macOS et Android.</p>
+          <p className="mt-5 text-sm text-subtle">En développement — bêta pour Windows, macOS et Linux ; application mobile à venir.</p>
         </div>
         <HeroIllustration />
       </div>
