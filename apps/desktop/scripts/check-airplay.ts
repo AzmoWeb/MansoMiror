@@ -54,6 +54,13 @@ const seen = await new Promise<Service | null>((res) => {
 bonjour.destroy();
 console.log("mDNS announcement seen:", seen ? JSON.stringify({ name: seen.name, host: seen.host, port: seen.port, addresses: seen.addresses }) : "NO");
 
+// The announcement must carry an IPv4 address, otherwise an iPhone lists nothing.
+if (!seen || !(seen.addresses ?? []).some((a) => /^\d+\.\d+\.\d+\.\d+$/.test(a))) {
+  console.error("AirPlay announcement missing or without an IPv4 address");
+  await r.stop();
+  process.exit(1);
+}
+
 let ok = last.status === "running" && last.inApp === true;
 if (ok && last.status === "running") {
   ok = await new Promise<boolean>((res) => {
