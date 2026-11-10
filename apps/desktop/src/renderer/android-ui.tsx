@@ -176,11 +176,21 @@ export function AndroidScreen({
       if (e.type === "meta" && e.meta.deviceName) setName(e.meta.deviceName);
       if (e.type === "ended") onClose(e.reason);
     });
+    // If no picture shows up quickly (missed parameters, slow phone), ask the phone
+    // to send its parameters and a key frame again, until a frame is decoded.
+    let retry: ReturnType<typeof setInterval> | null = null;
     void mm.androidStart(serial, true).then((r) => {
-      if (!r.ok) onClose(r.message);
+      if (!r.ok) return onClose(r.message);
+      retry = setInterval(() => {
+        if (d.stats.decoded > 0) {
+          if (retry) clearInterval(retry);
+          retry = null;
+        } else void mm.androidInput(serial, { kind: "reset-video" });
+      }, 1500);
     });
     stage.current?.focus();
     return () => {
+      if (retry) clearInterval(retry);
       offVideo();
       offEvent();
       d.close();

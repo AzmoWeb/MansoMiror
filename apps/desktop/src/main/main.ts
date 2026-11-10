@@ -93,6 +93,7 @@ const discovery = new Discovery();
 const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
 app.whenReady().then(() => (airplay.registryDir = app.getPath("userData")));
 airplay.on("state", (st) => win?.webContents.send(IPC.airplayEvent, st));
+airplay.on("video", (p) => win?.webContents.send(IPC.airplayVideo, p));
 
 // Test-only fake phone (see test/fixtures/fake-phone.mjs); ignored in packaged builds.
 const fakePhonePort = !app.isPackaged && process.env.MM_ANDROID_FAKE_PORT ? Number(process.env.MM_ANDROID_FAKE_PORT) : null;

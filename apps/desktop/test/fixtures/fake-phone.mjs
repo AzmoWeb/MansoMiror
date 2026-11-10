@@ -66,13 +66,18 @@ export function startFakePhone({ name = "Téléphone de test", width = 360, heig
   const control = [];
   const sockets = [];
   let timer = null;
+  let i = 0;
   const server = createServer((sock) => {
     sockets.push(sock);
     sock.on("error", () => {});
     if (sockets.length === 1) {
       sock.write(Buffer.from([0])); // "ready" dummy byte
     } else if (sockets.length === 2) {
-      sock.on("data", (d) => control.push(Buffer.from(d)));
+      sock.on("data", (d) => {
+        control.push(Buffer.from(d));
+        // RESET_VIDEO (type 17): like scrcpy-server, restart from parameters + a key frame.
+        if (d.includes(17)) i = 0;
+      });
       const video = sockets[0];
       const head = Buffer.alloc(76);
       head.write(name, 0, "utf8");
@@ -80,7 +85,7 @@ export function startFakePhone({ name = "Téléphone de test", width = 360, heig
       head.writeUInt32BE(width, 68);
       head.writeUInt32BE(height, 72);
       video.write(head);
-      let i = 0;
+      i = 0;
       let pts = 0;
       timer = setInterval(() => {
         // Loop the clip; restart from the first config packet.

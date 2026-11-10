@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, execFileSync, type ChildProcess } from "node:child_process";
+import { AirPlayVideoServer, vrtpPipeline, type H264Packet } from "./airplay-video.ts";
 import { existsSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import { randomInt } from "node:crypto";
@@ -17,12 +18,24 @@ import { cleanName } from "../shared/protocol.ts";
 export type AirPlayState =
   | { status: "unavailable"; reason: "not-installed" }
   | { status: "stopped" }
-  | { status: "running"; name: string; pin: string; since: number }
+  | {
+      status: "running";
+      name: string;
+      pin: string;
+      since: number;
+      /** true: the iPhone screen is shown inside MansoMirror (UxPlay >= 1.74); false: in UxPlay's own window. */
+      inApp: boolean;
+      /** An iPhone is currently mirroring. */
+      streaming: boolean;
+      /** Local port receiving the stream (127.0.0.1 only). */
+      videoPort: number;
+    }
   | { status: "error"; message: string };
 
 export interface AirPlayEvents {
   state: [AirPlayState];
   log: [string];
+  video: [H264Packet];
 }
 
 const BIN = process.platform === "win32" ? "uxplay.exe" : "uxplay";
@@ -40,16 +53,32 @@ export function findUxPlay(env: NodeJS.ProcessEnv = process.env, resourcesPath?:
   return candidates.find((p): p is string => !!p && existsSync(p)) ?? null;
 }
 
-export function airplayArgs(name: string, pin: string, platform: NodeJS.Platform = process.platform): string[] {
+export function airplayArgs(name: string, pin: string, platform: NodeJS.Platform = process.platform, videoPort = 0): string[] {
   return [
     "-n", name,
     "-nh", // show exactly our name in the iPhone list
     "-pin", pin, // the iPhone must type this code
     "-reset", "5", // free the receiver if the iPhone disappears
     "-nohold", // a new (authenticated) client replaces a stale one
-    // UxPlay's Windows notes: d3d12 can crash on some drivers; d3d11 is the safe choice.
-    ...(platform === "win32" ? ["-vs", "d3d11videosink"] : []),
+    "-s", "1920x1080@60", // ask the iPhone for 1080p at 60 Hz
+    "-fps", "60", // UxPlay's default cap is 30
+    ...(videoPort
+      ? // Video goes to MansoMirror's window; audio is played right away (the picture is not delayed either).
+        ["-vrtp", vrtpPipeline(videoPort), "-vsync", "no"]
+      : // UxPlay's Windows notes: d3d12 can crash on some drivers; d3d11 is the safe choice.
+        platform === "win32" ? ["-vs", "d3d11videosink"] : []),
   ];
+}
+
+/** UxPlay >= 1.74 can hand the stream to us (-vrtp); older builds only show their own window. */
+export function supportsInApp(bin: string, env: NodeJS.ProcessEnv = process.env): boolean {
+  try {
+    const out = execFileSync(bin, ["-h"], { env, timeout: 5000, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }).toString();
+    return out.includes("-vrtp");
+  } catch (e) {
+    const out = `${(e as { stdout?: Buffer }).stdout ?? ""}${(e as { stderr?: Buffer }).stderr ?? ""}`;
+    return out.includes("-vrtp");
+  }
 }
 
 /**
@@ -90,6 +119,7 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
   setBinary(bin: string | null) {
     if (this.proc) return;
     this.bin = bin;
+    this.inApp = null;
     this.set(bin ? { status: "stopped" } : { status: "unavailable", reason: "not-installed" });
   }
 
@@ -102,15 +132,28 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
     this.emit("state", s);
   }
 
-  start(deviceName: string): AirPlayState {
+  private video = new AirPlayVideoServer();
+  private inApp: boolean | null = null;
+
+  async start(deviceName: string): Promise<AirPlayState> {
     if (!this.bin) return this.state;
     if (this.proc) return this.state;
     const name = `${cleanName(deviceName)} · MansoMirror`.slice(0, 60);
     const pin = String(randomInt(0, 10_000)).padStart(4, "0");
-    const proc = spawn(this.bin, airplayArgs(name, pin), {
+    const env = runtimeEnv(this.bin, process.env, this.registryDir);
+    this.inApp ??= supportsInApp(this.bin, env);
+    const videoPort = this.inApp ? await this.video.listen() : 0;
+    if (this.inApp) {
+      this.video.removeAllListeners();
+      this.video.on("packet", (p) => this.emit("video", p));
+      this.video.on("streaming", (on) => {
+        if (this.state.status === "running") this.set({ ...this.state, streaming: on });
+      });
+    }
+    const proc = spawn(this.bin, airplayArgs(name, pin, process.platform, videoPort), {
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
-      env: runtimeEnv(this.bin, process.env, this.registryDir),
+      env,
     });
     this.proc = proc;
     const onData = (buf: Buffer) => {
@@ -120,20 +163,23 @@ export class AirPlayReceiver extends EventEmitter<AirPlayEvents> {
     proc.stderr?.on("data", onData);
     proc.once("error", (e) => {
       this.proc = null;
+      void this.video.close();
       this.set({ status: "error", message: e.message });
     });
     proc.once("exit", (code, signal) => {
       if (this.proc !== proc) return;
       this.proc = null;
+      void this.video.close();
       this.set(signal || code === 0 ? { status: "stopped" } : { status: "error", message: `UxPlay s'est arrêté (code ${code}).` });
     });
-    this.set({ status: "running", name, pin, since: Date.now() });
+    this.set({ status: "running", name, pin, since: Date.now(), inApp: !!this.inApp, streaming: false, videoPort });
     return this.state;
   }
 
   /** Stop the receiver; resolves once the process has exited. */
   stop(): Promise<void> {
     const proc = this.proc;
+    void this.video.close();
     if (!proc) return Promise.resolve();
     this.proc = null;
     return new Promise((resolve) => {
