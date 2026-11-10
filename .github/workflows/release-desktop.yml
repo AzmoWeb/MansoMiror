@@ -135,7 +135,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: MansoMirror Desktop ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }} (bêta, non signée)
           body: |
-            Version bêta de MansoMirror Desktop : partage d'écran entre ordinateurs sur le réseau local.
+            Version bêta de MansoMirror Desktop : affichez l'écran de votre iPhone (AirPlay) ou de votre Android (USB ou Wi-Fi) sur votre ordinateur.
 
             ⚠️ Les installeurs ne sont **pas encore signés** :
             - Windows affichera « Windows a protégé votre ordinateur » → « Informations complémentaires » → « Exécuter quand même ».

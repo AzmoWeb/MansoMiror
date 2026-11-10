@@ -19,7 +19,15 @@ git clone --quiet "$UXPLAY_REPO" "$SRC/UxPlay"
 git -C "$SRC/UxPlay" checkout --quiet "$UXPLAY_COMMIT"
 mkdir -p "$SRC/UxPlay/build"
 cd "$SRC/UxPlay/build"
-cmake -G Ninja .. >/dev/null
+# NO_MARCH_NATIVE: by default UxPlay compiles with -march=native, i.e. for the
+# build machine's exact CPU; on a user's PC that crashes at once with
+# 0xC000001D (illegal instruction). Build for any x86-64 CPU instead.
+cmake -G Ninja -DNO_MARCH_NATIVE=ON .. > cmake.log
+cat cmake.log
+if grep -q "march=native" cmake.log && ! grep -q "Not using -march=native" cmake.log; then
+  echo "UxPlay would be built for this CPU only (-march=native)" >&2
+  exit 1
+fi
 ninja >/dev/null
 
 rm -rf "$OUT"
