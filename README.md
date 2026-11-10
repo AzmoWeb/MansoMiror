@@ -16,6 +16,17 @@
 - [Direction artistique](documentation/brand.md)
 - [État d'avancement](documentation/status.md)
 
+## Site en ligne
+
+Le site est publié par GitHub Pages à l'adresse `https://azmoweb.github.io/MansoMiror/`
+(la page `github.com/AzmoWeb/MansoMiror` montre le code, pas le site). Conditions, une seule fois :
+
+1. Le dépôt doit être **public** (Settings → General → Danger Zone → Change visibility), sinon Pages
+   demande un abonnement payant et les fichiers des versions publiées ne sont pas téléchargeables par le public.
+2. Settings → Pages → Source : **GitHub Actions**.
+
+Ensuite, chaque modification de `main` met le site à jour automatiquement.
+
 ## Développement
 
 Prérequis : Node.js ≥ 22.18, pnpm 10.
