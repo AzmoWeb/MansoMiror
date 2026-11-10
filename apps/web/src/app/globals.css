@@ -135,3 +135,18 @@
 @media (prefers-reduced-motion: reduce) {
   .live-dot { animation: none; }
 }
+
+/* ---------- Hero scene animations ---------- */
+.mm-float { animation: mm-float 6s ease-in-out infinite; }
+.mm-dash { animation: mm-dash 1.1s linear infinite; }
+
+@keyframes mm-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.9cqw); }
+}
+@keyframes mm-dash {
+  to { stroke-dashoffset: -20; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mm-anim { animation: none !important; }
+}

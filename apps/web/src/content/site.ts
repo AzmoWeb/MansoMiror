@@ -118,7 +118,7 @@ export const steps = [
 export const faq = [
   {
     q: "Qu'est-ce que MansoMirror ?",
-    a: "Un ensemble d'applications pour afficher et contrôler vos appareils les uns depuis les autres : téléphone sur ordinateur, ordinateur sur téléphone, en Wi-Fi ou en USB. Le projet est en cours de développement : aucune version n'est encore publiée.",
+    a: "Un ensemble d'applications pour afficher et contrôler vos appareils les uns depuis les autres : téléphone sur ordinateur, ordinateur sur téléphone, en Wi-Fi ou en USB. Le projet est en cours de développement : l'application pour ordinateurs (Windows, macOS, Linux) est en bêta et permet de partager l'écran d'un ordinateur avec un autre ; l'application mobile est à venir.",
   },
   {
     q: "Comment connecter mon téléphone ?",

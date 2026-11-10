@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   build:
@@ -91,3 +92,8 @@ jobs:
 
             Vérifiez l'empreinte de votre fichier avec `SHA256SUMS.txt`.
           files: out/*
+      - name: Update the website's download section
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Fails harmlessly if GitHub Pages is not enabled yet.
+        run: gh workflow run pages.yml --repo "${{ github.repository }}" --ref "${{ github.event.repository.default_branch }}" || true

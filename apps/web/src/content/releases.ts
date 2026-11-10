@@ -4,6 +4,7 @@
  * release and its SHA-256 checksum taken from that release's SHA256SUMS.txt.
  * An empty platform renders an honest "not yet available" state.
  */
+import generated from "./releases.generated.json" with { type: "json" };
 
 export type PlatformId = "windows" | "macos" | "linux" | "android" | "ios";
 
@@ -39,7 +40,8 @@ export const platforms: PlatformInfo[] = [
   { id: "ios", name: "iOS / iPadOS", app: "MansoMirror Mobile", requirements: "iOS / iPadOS 15 ou plus récent" },
 ];
 
-export const releases: Release[] = [];
+/** Generated at build time by scripts/fetch-releases.ts from the GitHub releases API. */
+export const releases: Release[] = generated as Release[];
 
 const SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
 

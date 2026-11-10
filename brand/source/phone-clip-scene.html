@@ -1,0 +1,59 @@
+<!doctype html><html><body style="margin:0;background:#000"><canvas id="c" width="540" height="1170"></canvas>
+<script>
+const c = document.getElementById('c'), x = c.getContext('2d'), W = c.width, H = c.height, HZ = H * 0.53, TAU = Math.PI * 2;
+// deterministic pseudo-random
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const stars = Array.from({ length: 70 }, () => [rnd() * W, rnd() * HZ * 0.45, rnd() * 1.4 + 0.3, rnd()]);
+const clouds = Array.from({ length: 7 }, (_, i) => ({ y: HZ * (0.12 + rnd() * 0.55), w: 160 + rnd() * 220, h: 26 + rnd() * 30, off: rnd(), speed: 1 + (i % 2), a: 0.18 + rnd() * 0.22 }));
+const glints = Array.from({ length: 140 }, () => ({ y: HZ + 6 + Math.pow(rnd(), 1.6) * (H - HZ - 10), w: 6 + rnd() * 26, ph: rnd(), k: 1 + Math.floor(rnd() * 3) }));
+function draw(t) { // t in [0,1): every motion has an integer number of cycles → seamless loop
+  let g = x.createLinearGradient(0, 0, 0, HZ);
+  g.addColorStop(0, '#0E1A4D'); g.addColorStop(0.35, '#2448D8'); g.addColorStop(0.62, '#7B5BD9'); g.addColorStop(0.86, '#FF8A6B'); g.addColorStop(1, '#FFC98A');
+  x.fillStyle = g; x.fillRect(0, 0, W, HZ);
+  for (const [sx, sy, r, p] of stars) { x.globalAlpha = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(TAU * (t * 2 + p))); x.fillStyle = '#fff'; x.beginPath(); x.arc(sx, sy, r, 0, TAU); x.fill(); }
+  x.globalAlpha = 1;
+  // sun + glow
+  const sx = W * 0.5, sy = HZ - 70, sr = 92 + 3 * Math.sin(TAU * t);
+  let rg = x.createRadialGradient(sx, sy, sr * 0.6, sx, sy, sr * 3.2); rg.addColorStop(0, 'rgba(255,214,150,.55)'); rg.addColorStop(1, 'rgba(255,140,100,0)');
+  x.fillStyle = rg; x.fillRect(0, 0, W, HZ);
+  x.fillStyle = '#FFE7B8'; x.beginPath(); x.arc(sx, sy, sr, 0, TAU); x.fill();
+  // clouds drifting (integer laps)
+  for (const cl of clouds) {
+    const span = W + cl.w * 2, px = ((cl.off + t * cl.speed) % 1) * span - cl.w;
+    x.globalAlpha = cl.a; x.fillStyle = '#FFD9C7';
+    for (let k = 0; k < 4; k++) { x.beginPath(); x.ellipse(px + k * cl.w * 0.22, cl.y - (k % 2) * cl.h * 0.35, cl.w * 0.3, cl.h * 0.6, 0, 0, TAU); x.fill(); }
+  }
+  x.globalAlpha = 1;
+  // mountains
+  x.fillStyle = '#3B2E8C'; x.beginPath(); x.moveTo(0, HZ); [[0,HZ-60],[90,HZ-130],[170,HZ-70],[250,HZ-150],[330,HZ-80],[420,HZ-140],[540,HZ-55],[540,HZ]].forEach(([a,b])=>x.lineTo(a,b)); x.fill();
+  x.fillStyle = '#1C1D5C'; x.beginPath(); x.moveTo(0, HZ); [[0,HZ-25],[120,HZ-70],[210,HZ-30],[300,HZ-80],[400,HZ-35],[540,HZ-75],[540,HZ]].forEach(([a,b])=>x.lineTo(a,b)); x.fill();
+  // sea
+  g = x.createLinearGradient(0, HZ, 0, H); g.addColorStop(0, '#5B4FC9'); g.addColorStop(0.25, '#23338F'); g.addColorStop(1, '#070B26');
+  x.fillStyle = g; x.fillRect(0, HZ, W, H - HZ);
+  // waves
+  for (let i = 0; i < 46; i++) {
+    const yy = HZ + 8 + Math.pow(i / 46, 1.7) * (H - HZ), amp = 1.5 + (i / 46) * 9, f = 0.012 + (1 - i / 46) * 0.03;
+    x.strokeStyle = `rgba(160,180,255,${0.08 + (i / 46) * 0.18})`; x.lineWidth = 1 + (i / 46) * 2.2; x.beginPath();
+    for (let px = 0; px <= W; px += 6) { const yv = yy + amp * Math.sin(px * f + TAU * (t * (1 + (i % 3))) + i * 1.3); px ? x.lineTo(px, yv) : x.moveTo(px, yv); }
+    x.stroke();
+  }
+  // sun glints on the water
+  for (const gl of glints) {
+    const spread = 40 + (gl.y - HZ) * 0.42, a = Math.max(0, Math.sin(TAU * (t * gl.k + gl.ph)));
+    const gx = sx + Math.sin(TAU * (gl.ph * 3)) * spread;
+    x.globalAlpha = a * 0.85; x.fillStyle = '#FFE2B0'; x.fillRect(gx - gl.w / 2, gl.y, gl.w, 2 + (gl.y - HZ) / 260);
+  }
+  x.globalAlpha = 1;
+  // birds (two laps across, flapping)
+  for (let b = 0; b < 3; b++) {
+    const p = (t + b * 0.33) % 1, bx = -60 + p * (W + 120), by = HZ * (0.42 + 0.08 * b) + 10 * Math.sin(TAU * (t * 2 + b));
+    const fl = 7 * Math.sin(TAU * (t * 16 + b * 0.3)), s = 1 - b * 0.18;
+    x.strokeStyle = 'rgba(20,18,60,.85)'; x.lineWidth = 2.4 * s; x.beginPath();
+    x.moveTo(bx - 14 * s, by - fl * s); x.quadraticCurveTo(bx - 6 * s, by - 2, bx, by + 2 * s); x.quadraticCurveTo(bx + 6 * s, by - 2, bx + 14 * s, by - fl * s); x.stroke();
+  }
+  // vignette
+  rg = x.createRadialGradient(W / 2, H * 0.5, H * 0.25, W / 2, H * 0.5, H * 0.75); rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(1, 'rgba(0,0,0,.35)');
+  x.fillStyle = rg; x.fillRect(0, 0, W, H);
+}
+window.draw = draw;
+</script></body></html>

@@ -7,20 +7,20 @@ const tiles = [
   "#F5B92E",
   "#6E6E68",
   "#F2552F",
-  "#2CBFA2",
+  "#5577F5",
   "#3F3F3B",
-  "#9FEAD6",
+  "#C0CEFF",
   "#BDBDB8",
-  "#0D453D",
+  "#1C338C",
   "#FF9B85",
   "#55554F",
-  "#62D7BD",
+  "#9CB1FF",
 ];
 
 export function PhoneScreen({ blur = 0 }: { blur?: number }) {
   return (
     <div
-      className="flex h-full w-full flex-col bg-[linear-gradient(170deg,#0C544A_0%,#032823_100%)] p-[9%] text-white"
+      className="flex h-full w-full flex-col bg-[linear-gradient(170deg,#1E3BB2_0%,#0E1A4D_100%)] p-[9%] text-white"
       style={{ filter: blur ? `blur(${blur}px)` : undefined }}
       aria-hidden="true"
     >

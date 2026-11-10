@@ -3,9 +3,9 @@ import { Reveal } from "../Reveal";
 const apps = [
   {
     name: "MansoMirror Desktop",
-    platforms: "Windows · macOS",
-    body: "Le centre de contrôle : il trouve vos appareils, affiche leurs écrans, enregistre les sessions et vous permet de les piloter.",
-    status: "Phase 3",
+    platforms: "Windows · macOS · Linux",
+    body: "Le centre de contrôle : il trouve vos appareils, affiche leurs écrans et enregistre les sessions. La bêta partage l'écran entre deux ordinateurs du même réseau.",
+    status: "Bêta",
   },
   {
     name: "MansoMirror Mobile",
@@ -42,7 +42,7 @@ export function Apps() {
                   <p className="mt-3 max-w-xl text-muted">{a.body}</p>
                 </div>
                 <p className="self-start rounded-full border border-line-strong px-3 py-1 text-xs text-muted">
-                  En développement · {a.status}
+                  {a.status === "Bêta" ? "Bêta" : `En développement · ${a.status}`}
                 </p>
               </article>
             </Reveal>

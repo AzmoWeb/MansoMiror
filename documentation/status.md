@@ -19,7 +19,10 @@ Règle : une ligne passe en ✅ seulement si elle est développée **et** testé
 | Desktop — paquets Linux (AppImage, .deb) | ✅ | compilés et lancés ici |
 | Desktop — installeur Windows `.exe`, `.dmg` macOS | ⏳ | compilés par GitHub Actions ; à tester sur de vraies machines ; non signés |
 | Desktop — contrôle à distance, son, appareils de confiance, connexion hors réseau local | ⏳ | prévus |
-| Site — publication GitHub Pages | ⏳ | workflow prêt ; à activer dans Settings → Pages |
+| Site — publication GitHub Pages | ⏳ | workflow prêt ; à activer dans Settings → Pages (le déploiement échoue en 404 tant que ce n'est pas fait) |
+| Site — téléchargements alimentés automatiquement par les versions GitHub publiées | ✅ | `apps/web/scripts/fetch-releases.ts` — 5 tests unitaires ; rendu vérifié avec des données de test |
+| Desktop — installeurs compilés sur GitHub (Windows, macOS, Linux) | ✅ | workflow « Release desktop », exécution 42705656233 |
+| Desktop — version publiée | ⏳ | à lancer : Actions → Release desktop → Run workflow → « publish » |
 | Mobile, backend, admin | ⏳ | phases 4 à 6 |
 
 La section Téléchargements du site lit `apps/web/src/content/releases.ts`. Seuls des fichiers réellement publiés sur

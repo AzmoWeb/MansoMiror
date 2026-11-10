@@ -27,6 +27,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Read published desktop releases (files, sizes, SHA-256)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node apps/web/scripts/fetch-releases.ts
       - name: Build static site
         env:
           STATIC_EXPORT: "1"
