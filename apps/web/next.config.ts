@@ -12,6 +12,8 @@ const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ["@mansomirror/design-tokens"],
+  // Exposed to the client so media URLs work under the GitHub Pages sub-path.
+  env: { NEXT_PUBLIC_BASE_PATH: staticExport ? basePath : "" },
   ...(staticExport
     ? { output: "export", basePath, images: { unoptimized: true }, trailingSlash: true }
     : {

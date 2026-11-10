@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { LivePhoneScreen } from "./LivePhoneScreen";
+import { VideoScreen } from "./VideoScreen";
 
 /** Mirroring delay shown in the scene (seconds). */
 const LAG = 0.12;
@@ -12,6 +13,23 @@ const LAG = 0.12;
  */
 export function HeroScene() {
   const reduce = useReducedMotion();
+  const phone = useRef<HTMLVideoElement>(null);
+  const mirror = useRef<HTMLVideoElement>(null);
+
+  // The mirrored copy follows the phone's video, LAG seconds behind.
+  useEffect(() => {
+    if (reduce) return;
+    const t = setInterval(() => {
+      const a = phone.current;
+      const b = mirror.current;
+      if (!a || !b || !a.duration || a.paused) return;
+      const target = (a.currentTime - LAG + a.duration) % a.duration;
+      if (Math.abs(b.currentTime - target) > 0.2) b.currentTime = target;
+      if (b.paused) void b.play().catch(() => {});
+    }, 500);
+    return () => clearInterval(t);
+  }, [reduce]);
+
   const enter = (delay: number, y = 18) =>
     reduce ? {} : { initial: { opacity: 0, y }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.7, delay, ease: [0.2, 0, 0, 1] as const } };
 
@@ -52,12 +70,8 @@ export function HeroScene() {
                 <div className="relative flex h-[91%] items-center justify-center bg-[radial-gradient(60%_80%_at_50%_50%,#20222B,#121318)]">
                   {/* mirrored phone */}
                   <div className="relative h-[90%] overflow-hidden rounded-[1.5cqw] ring-[0.35cqw] ring-[#050506] text-[0.95cqw]" style={{ aspectRatio: "9 / 19.5" }}>
-                    <LivePhoneScreen lag={LAG} />
+                    <VideoScreen ref={mirror} autoPlay={!reduce} />
                   </div>
-                  {/* cursor mirroring the tap */}
-                  <svg className="mm-anim mm-cursor absolute left-[51%] top-[31%] w-[1.9cqw]" style={{ animationDelay: `${LAG}s` }} viewBox="0 0 24 24">
-                    <path d="M5 3l14 8-6 1.5L10 19z" fill="#fff" stroke="#111" strokeWidth="1.5" strokeLinejoin="round" />
-                  </svg>
                   {/* side toolbar */}
                   <div className="absolute right-[3%] top-1/2 flex -translate-y-1/2 flex-col gap-[0.8cqw] rounded-[0.9cqw] bg-white/6 p-[0.7cqw] ring-1 ring-white/10">
                     {["M4 8h3l2-2h6l2 2h3v11H4z", "M12 6v12M6 12h12", "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"].map((p) => (
@@ -109,7 +123,7 @@ export function HeroScene() {
               <span className="absolute -left-[0.35cqw] top-[32%] h-[11%] w-[0.4cqw] rounded-l-full bg-[#2A2B31]" />
               <span className="absolute -right-[0.35cqw] top-[28%] h-[14%] w-[0.4cqw] rounded-r-full bg-[#2A2B31]" />
               <div className="relative overflow-hidden rounded-[3.7cqw] text-[1.95cqw]" style={{ aspectRatio: "9 / 19.5" }}>
-                <LivePhoneScreen />
+                <VideoScreen ref={phone} autoPlay={!reduce} />
                 {/* camera pill */}
                 <span className="absolute left-1/2 top-[1.6%] h-[3.2%] w-[30%] -translate-x-1/2 rounded-full bg-black" />
                 {/* glass reflection */}
