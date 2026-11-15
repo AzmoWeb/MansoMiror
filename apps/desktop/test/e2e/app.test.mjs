@@ -54,11 +54,11 @@ test("renderer is isolated: no Node, only the narrow API", { timeout: 60_000 }, 
     "androidConnect", "androidDevices", "androidInput", "androidPair", "androidStart", "androidStatus", "androidStop",
     "clearHistory", "diag", "discoverStart", "discoverStop", "getSettings", "history",
     "hostAccept", "hostEndSession", "hostNewPin", "hostRefuse", "hostStart", "hostStop",
-    "info", "killAll", "listSources",
-    "onAirPlay", "onAirPlayVideo", "onAndroidEvent", "onAndroidVideo", "onDevices", "onHostEvent", "onKilled", "onUpdate", "onViewerEvent", "openLogs",
+    "info", "killAll", "listSources", "mirrorClose", "mirrorOpen",
+    "onAirPlay", "onAirPlayVideo", "onAndroidEvent", "onAndroidVideo", "onDevices", "onHostEvent", "onKilled", "onMirrorClosed", "onUpdate", "onViewerEvent", "openLogs",
     "saveFile", "selectSource", "setSettings",
     "updateCheck", "updateInstall", "updateState",
-    "viewerConnect", "viewerDisconnect", "viewerSetRecording",
+    "viewerConnect", "viewerDisconnect", "viewerSetRecording", "windowAction", "windowLayout",
   ]);
   assert.equal(r.popup, true);
 });

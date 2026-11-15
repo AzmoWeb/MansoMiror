@@ -1,6 +1,6 @@
 import { networkInterfaces } from "node:os";
 import { Bonjour, type Service } from "bonjour-service";
-import { app, BrowserWindow, desktopCapturer, dialog, type DesktopCapturerSource, globalShortcut, ipcMain, protocol, session, shell, type IpcMainInvokeEvent } from "electron";
+import { app, BrowserWindow, desktopCapturer, dialog, type DesktopCapturerSource, globalShortcut, ipcMain, protocol, screen, session, shell, type IpcMainInvokeEvent, type Rectangle } from "electron";
 import { join, normalize, extname, sep } from "node:path";
 import { readFileSync, writeFileSync, mkdirSync, appendFileSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -116,10 +116,77 @@ async function selfCheckAirPlay(name: string) {
 const airplay = new AirPlayReceiver(findUxPlay(process.env, process.resourcesPath));
 app.whenReady().then(() => (airplay.registryDir = app.getPath("userData")));
 const airplayGop = new GopCache();
+
+// ---------------------------------------------------------------------------
+// Floating phone window: the phone alone, in its frame, over the desktop.
+// ---------------------------------------------------------------------------
+export type MirrorTarget = { kind: "iphone"; name: string } | { kind: "android"; serial: string; model: string; transport: "usb" | "wifi" };
+let mirrorWin: BrowserWindow | null = null;
+let mirrorTarget: MirrorTarget | null = null;
+
+/** Sends to the main window and to the floating phone window. */
+function sendAll(channel: string, payload?: unknown) {
+  for (const w of [win, mirrorWin]) if (w && !w.isDestroyed()) w.webContents.send(channel, payload);
+}
+
+function openMirror(target: MirrorTarget) {
+  if (mirrorWin && !mirrorWin.isDestroyed()) {
+    if (JSON.stringify(mirrorTarget) === JSON.stringify(target)) return mirrorWin.show();
+    mirrorWin.close();
+  }
+  const wa = screen.getDisplayMatching(win?.getBounds() ?? screen.getPrimaryDisplay().bounds).workArea;
+  const height = Math.round(Math.min(wa.height * 0.9, 1040));
+  const width = Math.round((height - 70) * 0.46 + 90);
+  const w = new BrowserWindow({
+    width,
+    height,
+    x: Math.round(wa.x + (wa.width - width) / 2),
+    y: Math.round(wa.y + (wa.height - height) / 2),
+    frame: false,
+    transparent: true,
+    backgroundColor: "#00000000",
+    hasShadow: false,
+    resizable: false,
+    maximizable: false,
+    alwaysOnTop: true,
+    title: target.kind === "iphone" ? "iPhone — MansoMirror" : `${target.model} — MansoMirror`,
+    show: false,
+    webPreferences: {
+      preload: join(__dirname, "preload.js"),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      webSecurity: true,
+      spellcheck: false,
+    },
+  });
+  w.setAlwaysOnTop(true, "floating");
+  mirrorWin = w;
+  mirrorTarget = target;
+  w.once("ready-to-show", () => w.show());
+  w.on("closed", () => {
+    if (mirrorWin === w) {
+      mirrorWin = null;
+      if (mirrorTarget?.kind === "android") android.stop(mirrorTarget.serial);
+      const t = mirrorTarget;
+      mirrorTarget = null;
+      win?.webContents.send(IPC.mirrorClosed, t);
+    }
+  });
+  logLine(`mirror window opened (${target.kind})`);
+  void w.loadURL(`${RENDERER_URL}#mirror=${encodeURIComponent(JSON.stringify(target))}`);
+}
+
+function closeMirror(kind?: MirrorTarget["kind"]) {
+  if (mirrorWin && !mirrorWin.isDestroyed() && (!kind || mirrorTarget?.kind === kind)) mirrorWin.close();
+}
 airplay.on("state", (st) => {
   if (st.status !== "running") airplayGop.clear();
   logLine(`airplay ${st.status}${st.status === "error" ? `: ${st.message}` : st.status === "running" ? ` inApp=${st.inApp} streaming=${st.streaming}` : ""}`);
-  win?.webContents.send(IPC.airplayEvent, st);
+  sendAll(IPC.airplayEvent, st);
+  // The iPhone started mirroring: show it in its own floating window.
+  if (st.status === "running" && st.inApp && st.streaming) openMirror({ kind: "iphone", name: st.name });
+  else closeMirror("iphone");
 });
 // Full receiver output, for diagnosis: <userData>/logs/uxplay.log
 airplay.on("log", (line) => {
@@ -143,7 +210,7 @@ airplay.on("video", (p) => {
     logLine(`airplay video: ${videoCount.packets} packets, ${videoCount.keys} key frames, ${videoCount.configs} configs so far`);
     videoCount.at = Date.now();
   }
-  win?.webContents.send(IPC.airplayVideo, p);
+  sendAll(IPC.airplayVideo, p);
 });
 
 // Test-only fake phone (see test/fixtures/fake-phone.mjs); ignored in packaged builds.
@@ -170,9 +237,9 @@ android.on("event", (e) => {
     if (id) store.endSession(id, e.reason);
     androidHistory.delete(e.serial);
   }
-  win?.webContents.send(IPC.androidEvent, e);
+  sendAll(IPC.androidEvent, e);
 });
-android.on("packet", (p) => win?.webContents.send(IPC.androidVideo, p));
+android.on("packet", (p) => sendAll(IPC.androidVideo, p));
 let selectedSource: DesktopCapturerSource | null = null;
 /** Sources from the last listing shown to the user; only these can be selected. */
 let listedSources = new Map<string, DesktopCapturerSource>();
@@ -222,12 +289,21 @@ async function killAll() {
   await Promise.all([host.stop("killed"), airplay.stop()]);
   discovery.unpublish();
   selectedSource = null;
-  win?.webContents.send(IPC.killed);
+  sendAll(IPC.killed);
+  closeMirror();
 }
 
 // ---------------------------------------------------------------------------
 // IPC — every handler checks the sender and validates its arguments.
 // ---------------------------------------------------------------------------
+/** Like handle(), with the window the call came from. */
+function handleFrom(channel: string, fn: (w: BrowserWindow | null, ...args: any[]) => unknown) {
+  ipcMain.handle(channel, (e: IpcMainInvokeEvent, ...args: unknown[]) => {
+    if (!isAppUrl(e.senderFrame?.url)) throw new Error("forbidden");
+    return fn(BrowserWindow.fromWebContents(e.sender), ...args);
+  });
+}
+
 function handle(channel: string, fn: (...args: any[]) => unknown) {
   ipcMain.handle(channel, (e: IpcMainInvokeEvent, ...args: unknown[]) => {
     if (!isAppUrl(e.senderFrame?.url)) throw new Error("forbidden");
@@ -354,6 +430,51 @@ function registerIpc() {
       return { status: "error", message: `Démarrage impossible : ${(e as Error).message}` };
     }
   });
+  // Window of the caller: compact size (fitted to the phone) and/or always on top.
+  let normalBounds: Rectangle | null = null;
+  handleFrom(IPC.windowLayout, (w, l) => {
+    if (!w || !l || typeof l !== "object") return;
+    const { compact, onTop, width, height } = l as { compact?: unknown; onTop?: unknown; width?: unknown; height?: unknown };
+    w.setAlwaysOnTop(onTop === true, "floating");
+    const ok = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
+    const wa = screen.getDisplayMatching(w.getBounds()).workArea;
+    if (w === mirrorWin) {
+      // The floating phone window always fits the phone.
+      if (ok(width) && ok(height)) {
+        const b = w.getBounds();
+        const nw = Math.round(Math.max(200, Math.min(width, wa.width)));
+        const nh = Math.round(Math.max(300, Math.min(height, wa.height)));
+        w.setBounds({ x: Math.round(Math.min(Math.max(b.x + (b.width - nw) / 2, wa.x), wa.x + wa.width - nw)), y: Math.round(Math.min(Math.max(b.y, wa.y), wa.y + wa.height - nh)), width: nw, height: nh });
+      }
+      return;
+    }
+    if (compact === true && ok(width) && ok(height)) {
+      if (!normalBounds) normalBounds = w.isMaximized() ? w.getNormalBounds() : w.getBounds();
+      if (w.isMaximized()) w.unmaximize();
+      if (w.isFullScreen()) w.setFullScreen(false);
+      w.setMinimumSize(240, 360);
+      w.setContentSize(Math.round(Math.max(240, Math.min(width, wa.width))), Math.round(Math.max(360, Math.min(height, wa.height - 40))));
+      const b = w.getBounds();
+      w.setPosition(Math.round(Math.min(Math.max(b.x, wa.x), wa.x + wa.width - b.width)), Math.round(wa.y + Math.max(0, (wa.height - b.height) / 2)));
+    } else if (compact !== true && normalBounds) {
+      w.setMinimumSize(900, 600);
+      w.setBounds(normalBounds);
+      normalBounds = null;
+    }
+  });
+  handleFrom(IPC.windowAction, (w, action) => {
+    if (!w) return;
+    if (action === "minimize") w.minimize();
+    else if (action === "close") w.close();
+  });
+  // Android: show the phone in its own floating window.
+  handle(IPC.mirrorOpen, (d) => {
+    const x = d as { serial?: unknown; model?: unknown; transport?: unknown } | null;
+    if (!x || !isSerial(x.serial)) return false;
+    openMirror({ kind: "android", serial: x.serial as string, model: typeof x.model === "string" ? x.model.slice(0, 80) : "Android", transport: x.transport === "usb" ? "usb" : "wifi" });
+    return true;
+  });
+  handle(IPC.mirrorClose, () => closeMirror());
   handle(IPC.diag, (m) => {
     if (typeof m === "string") logLine(m.replace(/[\r\n]+/g, " ").slice(0, 300));
   });
@@ -365,7 +486,7 @@ function registerIpc() {
   handle(IPC.airplayStop, () => airplay.stop());
   // The iPhone screen just opened: send it the last key frame and what followed.
   handle(IPC.airplayReplay, () => {
-    for (const p of airplayGop.snapshot()) win?.webContents.send(IPC.airplayVideo, p);
+    for (const p of airplayGop.snapshot()) sendAll(IPC.airplayVideo, p);
   });
 
   handle(IPC.updateState, () => updater.state);

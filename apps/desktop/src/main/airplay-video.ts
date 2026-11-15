@@ -123,7 +123,7 @@ export interface VideoServerEvents {
 }
 
 /** Without a frame for this long, the iPhone is considered to have stopped mirroring. */
-export const IDLE_MS = 2000;
+export const IDLE_MS = 6000;
 
 /**
  * Local-only TCP endpoint receiving UxPlay's stream.
