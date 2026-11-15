@@ -64,6 +64,7 @@ export function airplayArgs(name: string, pin: string, platform: NodeJS.Platform
     "-pin", pin, // the iPhone must type this code
     "-reset", "5", // free the receiver if the iPhone disappears
     "-nohold", // a new (authenticated) client replaces a stale one
+    "-p", // fixed AirPlay ports (TCP 7000/7001/7100): the iPhone finds the PC again after a restart
     "-s", "1920x1080@60", // ask the iPhone for 1080p at 60 Hz
     "-fps", "60", // UxPlay's default cap is 30
     ...(videoPort
