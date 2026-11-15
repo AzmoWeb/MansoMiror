@@ -1,3 +1,42 @@
+diff --git a/lib/mdnsd/dnssd_mdnsd.c b/lib/mdnsd/dnssd_mdnsd.c
+index 09f27ef..d00ef5c 100644
+--- a/lib/mdnsd/dnssd_mdnsd.c
++++ b/lib/mdnsd/dnssd_mdnsd.c
+@@ -59,7 +59,7 @@ static void dnssd_sanitize_label(char *label)
+     }
+ }
+ 
+-static void dnssd_make_host_name(char *dst, size_t dst_len)
++static void dnssd_make_host_name(char *dst, size_t dst_len, const char *hw, int hw_len)
+ {
+     char host[128];
+ 
+@@ -68,7 +68,15 @@ static void dnssd_make_host_name(char *dst, size_t dst_len)
+     }
+     host[sizeof(host) - 1] = '\0';
+     dnssd_sanitize_label(host);
+-    snprintf(dst, dst_len, "%s.local", host);
++    /* MansoMirror: make the host name unique on the network (a generic name
++       such as "Internet" or "PC" may already be used by another device, and
++       the iPhone would then resolve it to the wrong address). */
++    if (hw && hw_len >= 3) {
++        const unsigned char *h = (const unsigned char *) hw + hw_len - 3;
++        snprintf(dst, dst_len, "%.40s-%02x%02x%02x-mm.local", host, h[0], h[1], h[2]);
++    } else {
++        snprintf(dst, dst_len, "%s.local", host);
++    }
+ }
+ 
+ static int dnssd_prepare_names(dnssd_private_t *dnssd, dnssd_t *dnssd_public)
+@@ -89,7 +97,7 @@ static int dnssd_prepare_names(dnssd_private_t *dnssd, dnssd_t *dnssd_public)
+         return -1;
+     }
+ 
+-    dnssd_make_host_name(dnssd->host_name, sizeof(dnssd->host_name));
++    dnssd_make_host_name(dnssd->host_name, sizeof(dnssd->host_name), dnssd_public->hw_addr, dnssd_public->hw_addr_len);
+     return 0;
+ }
+ 
 diff --git a/lib/mdnsd/mdnsd.c b/lib/mdnsd/mdnsd.c
 index 97a1ba6..da7906a 100644
 --- a/lib/mdnsd/mdnsd.c
