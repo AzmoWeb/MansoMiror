@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AndroidDevice, AndroidInput, MansoApi } from "../shared/api.ts";
 import { H264CanvasDecoder, type DecoderStats } from "./h264-decoder.ts";
 import { Icon, Svg, useElapsed, type Toast } from "./ui.tsx";
+import { MirrorIcon, MirrorLayout, RecordGlyph, ToolButton, ToolSeparator, useMirrorTools } from "./mirror-ui.tsx";
 
 const mm = (window as unknown as { mm: MansoApi }).mm;
 
@@ -144,11 +145,13 @@ export function AndroidScreen({
   onClose,
   onKill,
   toast,
+  floating = false,
 }: {
   device: AndroidDevice;
   onClose: (reason?: string) => void;
   onKill: () => void;
   toast: (t: string, tone?: Toast["tone"]) => void;
+  floating?: boolean;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
@@ -207,57 +210,22 @@ export function AndroidScreen({
     return { x: Math.max(0, Math.min(c.width - 1, x)), y: Math.max(0, Math.min(c.height - 1, y)), w: c.width, h: c.height };
   };
 
-  async function screenshot() {
-    const blob = await new Promise<Blob | null>((r) => canvas.current!.toBlob(r, "image/png"));
-    if (!blob) return;
-    if (await mm.saveFile("png", await blob.arrayBuffer())) toast("Capture enregistrée.", "ok");
-  }
-
   const nav = (button: "back" | "home" | "recents" | "power" | "volume-up" | "volume-down") => send({ kind: "nav", button });
 
+  const t = useMirrorTools(canvas, stage, toast, floating, stats);
+
   return (
-    <div className="viewer android" data-testid="android-screen">
-      <header className="viewer-bar">
-        <span className="live">
-          <span className="dot live-dot" />
-        </span>
-        <b>{name}</b>
-        <span className="mono muted small">{elapsed}</span>
-        <span className="mono muted small stats" data-testid="android-stats">
-          {stats && stats.width ? `${stats.width}×${stats.height} · ${stats.fps} i/s · ${device.transport === "usb" ? "USB" : "Wi-Fi"}` : "Connexion au téléphone…"}
-        </span>
-        <span className="grow" />
-        <button className="icon-btn" onClick={() => nav("volume-down")} title="Volume −" aria-label="Volume moins">
-          <Svg d="M4 9h4l5-4v14l-5-4H4zM16 12h5" />
-        </button>
-        <button className="icon-btn" onClick={() => nav("volume-up")} title="Volume +" aria-label="Volume plus">
-          <Svg d="M4 9h4l5-4v14l-5-4H4zM16 12h5M18.5 9.5v5" />
-        </button>
-        <button className="icon-btn" onClick={() => nav("power")} title="Verrouiller / allumer" aria-label="Bouton marche">
-          <Svg d="M12 3v8M7 6.5a7 7 0 1 0 10 0" />
-        </button>
-        <button className="icon-btn" onClick={() => void screenshot()} title="Capture d'écran" aria-label="Capture d'écran">
-          <Svg d={Icon.camera} />
-        </button>
-        <button className={`btn ghost sm ${control ? "" : "off"}`} onClick={() => setControl((c) => !c)} aria-pressed={control} title="Contrôler le téléphone à la souris et au clavier">
-          {control ? "Contrôle activé" : "Lecture seule"}
-        </button>
-        <button className="icon-btn" onClick={() => void stage.current?.requestFullscreen()} title="Plein écran" aria-label="Plein écran">
-          <Svg d={Icon.full} />
-        </button>
-        <button className="btn ghost sm" onClick={() => onClose()}>
-          Déconnecter
-        </button>
-        <button className="btn danger sm" onClick={onKill} title="Ctrl+Alt+K">
-          Tout couper
-        </button>
-      </header>
-      <div
-        className="stage phone-stage"
-        ref={stage}
-        tabIndex={0}
-        onKeyDown={(e) => {
+    <MirrorLayout
+      testId="android-screen"
+      stageRef={stage}
+      live
+      floating={floating}
+      onClose={() => onClose()}
+      stageProps={{
+        tabIndex: 0,
+        onKeyDown: (e) => {
           if (e.ctrlKey || e.metaKey || e.altKey) return;
+          if ((e.target as HTMLElement).closest("button")) return;
           if (e.key === "Escape") {
             nav("back");
           } else if (Keycodes[e.key]) {
@@ -267,13 +235,23 @@ export function AndroidScreen({
             send({ kind: "text", text: e.key });
           } else return;
           e.preventDefault();
-        }}
-      >
+        },
+      }}
+      caption={
+        <>
+          <b>{name}</b>
+          <span className="mono muted small">{elapsed}</span>
+          <span className="mono muted small stats" data-testid="android-stats">
+            {stats && stats.width ? `${stats.width}×${stats.height} · ${stats.fps} i/s · ${device.transport === "usb" ? "USB" : "Wi-Fi"}` : "Connexion au téléphone…"}
+          </span>
+        </>
+      }
+      phone={
         <canvas
           ref={canvas}
           width={1}
           height={1}
-          className="phone-canvas"
+          className={`phone-canvas${control ? " control" : ""}`}
           data-testid="android-canvas"
           onContextMenu={(e) => {
             e.preventDefault();
@@ -299,22 +277,37 @@ export function AndroidScreen({
             send({ kind: "scroll", ...p, dx: Math.max(-16, Math.min(16, -e.deltaX / 50)), dy: Math.max(-16, Math.min(16, -e.deltaY / 50)) });
           }}
         />
-        <nav className="android-nav" aria-label="Boutons Android">
-          <button onClick={() => nav("back")} aria-label="Retour" title="Retour (clic droit, Échap)">
-            <Svg d="M15 6l-6 6 6 6" />
-          </button>
-          <button onClick={() => nav("home")} aria-label="Accueil" title="Accueil (clic molette)">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      }
+      tools={
+        <>
+          <ToolButton icon={Icon.full} label="Plein écran" onClick={t.fullscreen} />
+          <ToolButton icon={Icon.camera} label="Capture d'écran" onClick={() => void t.screenshot()} />
+          <ToolButton label={t.recording ? "Arrêter l'enregistrement" : "Enregistrer la vidéo"} onClick={t.toggleRecording} active={t.recording}>
+            <RecordGlyph on={t.recording} />
+          </ToolButton>
+          <ToolButton icon={MirrorIcon.pin} label="Toujours au premier plan" onClick={() => void t.toggleOnTop()} active={t.onTop} />
+          {!floating && <ToolButton icon={MirrorIcon.compact} label="Fenêtre à la taille du téléphone" onClick={() => void t.toggleCompact()} active={t.compact} />}
+          <ToolSeparator />
+          <ToolButton icon={MirrorIcon.hand} label={control ? "Contrôle activé" : "Lecture seule"} onClick={() => setControl((c) => !c)} active={control} />
+          <ToolButton icon={MirrorIcon.back} label="Retour" onClick={() => nav("back")} />
+          <ToolButton label="Accueil" onClick={() => nav("home")}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <circle cx="12" cy="12" r="6" />
             </svg>
-          </button>
-          <button onClick={() => nav("recents")} aria-label="Applications récentes" title="Applications récentes">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          </ToolButton>
+          <ToolButton label="Applications récentes" onClick={() => nav("recents")}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <rect x="6.5" y="6.5" width="11" height="11" rx="1.5" />
             </svg>
-          </button>
-        </nav>
-      </div>
-    </div>
+          </ToolButton>
+          <ToolButton icon={MirrorIcon.volDown} label="Volume moins" onClick={() => nav("volume-down")} />
+          <ToolButton icon={MirrorIcon.volUp} label="Volume plus" onClick={() => nav("volume-up")} />
+          <ToolButton icon={MirrorIcon.power} label="Bouton marche" onClick={() => nav("power")} />
+          <ToolSeparator />
+          <ToolButton icon={MirrorIcon.eject} label="Déconnecter" onClick={() => onClose()} />
+          <ToolButton icon={Icon.close} label="Tout couper" onClick={onKill} danger />
+        </>
+      }
+    />
   );
 }

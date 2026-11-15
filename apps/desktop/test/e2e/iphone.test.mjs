@@ -62,13 +62,16 @@ test("a mirrored stream shows the iPhone screen large in the window, then return
   const { videoPort } = await page.evaluate(() => window.mm.airplayState());
   const tail = `config-interval=-1 ! rtph264depay ! h264parse config-interval=-1 ! video/x-h264,stream-format=byte-stream,alignment=au ! tcpclientsink host=127.0.0.1 port=${videoPort} sync=false`;
   const pipeline = `videotestsrc is-live=true num-buffers=150 pattern=ball ! video/x-raw,width=640,height=1136,framerate=30/1 ! x264enc tune=zerolatency key-int-max=100000 ! h264parse ! rtph264pay ${tail}`;
+  const opened = app.waitForEvent("window", { timeout: 15000 });
   const gst = spawn("gst-launch-1.0", ["-q", ...pipeline.split(" ")], { stdio: process.env.MM_DEBUG ? "inherit" : "ignore" });
   if (process.env.MM_DEBUG) gst.on("exit", (c) => console.error("gst exit", c));
 
-  await page.getByTestId("iphone-screen").waitFor({ timeout: 15000 });
+  // The iPhone opens in its own floating window.
+  const screen = await opened;
+  await screen.getByTestId("iphone-screen").waitFor({ timeout: 15000 });
   if (process.env.MM_DEBUG) console.error("iphone screen shown");
-  await page.getByTestId("iphone-stats").filter({ hasText: /640×1136 · \d+ i\/s/ }).waitFor({ timeout: 15000 });
-  const r = await page.evaluate(() => {
+  await screen.getByTestId("iphone-stats").filter({ hasText: /640×1136 · \d+ i\/s/ }).waitFor({ timeout: 15000 });
+  const r = await screen.evaluate(() => {
     const c = document.querySelector('[data-testid="iphone-canvas"]');
     const rect = c.getBoundingClientRect();
     return { w: c.width, h: c.height, shownH: rect.height, viewportH: innerHeight };
@@ -76,9 +79,10 @@ test("a mirrored stream shows the iPhone screen large in the window, then return
   assert.deepEqual([r.w, r.h], [640, 1136]);
   assert.ok(r.shownH > r.viewportH * 0.6, "shown large");
   assert.ok(r.shownH <= r.viewportH, "fully visible (not cut)");
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/iphone-screen.png` });
+  if (SHOTS) await screen.screenshot({ path: `${SHOTS}/iphone-screen.png` });
 
   await new Promise((res) => gst.once("exit", res));
+  await screen.waitForEvent("close", { timeout: 20000 });
   await page.waitForSelector(".shell", { timeout: 15000 });
   assert.equal(await page.getByTestId("iphone-screen").count(), 0);
 });

@@ -13,7 +13,7 @@ const require = createRequire(import.meta.url);
 const { _electron: electron } = require("playwright");
 const appDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SHOTS = process.env.SHOTS_DIR;
-let app, page, phone, dir;
+let app, page, phone, dir, screen;
 
 before(async () => {
   phone = await startFakePhone({ name: "Pixel de test", width: 360, height: 640 });
@@ -55,13 +55,16 @@ test("the test phone is listed and opens full window", { timeout: 60_000 }, asyn
   const panel = page.getByTestId("android");
   await panel.getByText("Téléphone de test").waitFor({ timeout: 10000 });
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/android-panel.png` });
+  const opened = app.waitForEvent("window", { timeout: 15000 });
   await panel.getByRole("button", { name: "Afficher" }).first().click();
-  await page.getByTestId("android-screen").waitFor();
+  // The phone opens in its own floating window.
+  screen = await opened;
+  await screen.getByTestId("android-screen").waitFor();
 });
 
 test("the real H.264 video is decoded and drawn at the phone's resolution", { timeout: 60_000 }, async () => {
-  await page.getByTestId("android-stats").filter({ hasText: /360×640 · \d+ i\/s/ }).waitFor({ timeout: 15000 });
-  const r = await page.evaluate(() => {
+  await screen.getByTestId("android-stats").filter({ hasText: /360×640 · \d+ i\/s/ }).waitFor({ timeout: 15000 });
+  const r = await screen.evaluate(() => {
     const c = document.querySelector('[data-testid="android-canvas"]');
     const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
     let colored = 0;
@@ -73,16 +76,16 @@ test("the real H.264 video is decoded and drawn at the phone's resolution", { ti
   assert.equal(r.h, 640);
   assert.ok(r.colored > 100, `canvas looks empty (${r.colored})`);
   assert.ok(r.shownH > r.viewportH * 0.6, "phone is shown large");
-  await page.waitForTimeout(500);
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/android-screen.png` });
+  await screen.waitForTimeout(500);
+  if (SHOTS) await screen.screenshot({ path: `${SHOTS}/android-screen.png` });
 });
 
 test("a click on the picture becomes a touch at the right phone coordinates", { timeout: 30_000 }, async () => {
   phone.control.length = 0;
-  const box = await page.getByTestId("android-canvas").boundingBox();
+  const box = await screen.getByTestId("android-canvas").boundingBox();
   // Click at 25 % / 75 % of the picture → expect ~(90, 480) on a 360×640 phone.
-  await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.75);
-  await page.waitForTimeout(300);
+  await screen.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.75);
+  await screen.waitForTimeout(300);
   const msgs = messages(controlBytes()).filter((m) => m[0] === 2);
   assert.ok(msgs.length >= 2, `touch messages: ${msgs.length}`);
   const downMsg = msgs[0];
@@ -98,23 +101,25 @@ test("a click on the picture becomes a touch at the right phone coordinates", { 
 
 test("Android buttons and typing reach the phone", { timeout: 30_000 }, async () => {
   phone.control.length = 0;
-  await page.getByRole("button", { name: "Retour", exact: true }).click();
-  await page.getByRole("button", { name: "Accueil" }).click();
-  await page.getByTestId("android-canvas").click();
+  await screen.getByRole("button", { name: "Retour", exact: true }).click();
+  await screen.getByRole("button", { name: "Accueil" }).click();
+  await screen.getByTestId("android-canvas").click();
   phone.control.length = 0;
-  await page.keyboard.type("ok");
-  await page.waitForTimeout(300);
+  await screen.keyboard.type("ok");
+  await screen.waitForTimeout(300);
   const texts = messages(controlBytes()).filter((m) => m[0] === 1).map((m) => m.subarray(5).toString());
   assert.deepEqual(texts, ["o", "k"]);
 });
 
 test("read-only mode sends nothing; Déconnecter returns to the device list", { timeout: 30_000 }, async () => {
-  await page.getByRole("button", { name: "Contrôle activé" }).click();
+  await screen.getByRole("button", { name: "Contrôle activé" }).click();
   phone.control.length = 0;
-  const box = await page.getByTestId("android-canvas").boundingBox();
-  await page.mouse.click(box.x + 20, box.y + 20);
-  await page.waitForTimeout(300);
+  const box = await screen.getByTestId("android-canvas").boundingBox();
+  await screen.mouse.click(box.x + 20, box.y + 20);
+  await screen.waitForTimeout(300);
   assert.equal(controlBytes().length, 0);
-  await page.getByRole("button", { name: "Déconnecter" }).click();
+  const closed = screen.waitForEvent("close", { timeout: 10000 });
+  await screen.getByRole("button", { name: "Déconnecter" }).click();
+  await closed;
   await page.waitForSelector(".shell");
 });

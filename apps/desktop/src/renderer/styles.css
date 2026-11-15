@@ -173,3 +173,73 @@ input.port { width: 84px; }
 .iphone-stage { padding-bottom: 16px; }
 .iphone-canvas { max-height: calc(100vh - 48px - 32px); cursor: default; }
 :fullscreen .phone-canvas { max-height: calc(100vh - 32px); }
+
+/* Mirrored phone: device frame + vertical toolbar (sizes match mirror-ui.tsx) */
+.mirror {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  height: 100%; padding: 16px; outline: none; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 0%, #1b2233 0%, #0b0d12 60%);
+}
+.mirror-main { display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: 0; max-height: 100%; }
+.mirror-caption {
+  display: flex; align-items: center; gap: 8px; height: 30px; max-width: 100%;
+  color: #e9ecf3; font-size: 13px; white-space: nowrap; overflow: hidden;
+}
+.mirror-caption .muted { color: #9aa3b5; }
+.mirror-caption .stats { overflow: hidden; text-overflow: ellipsis; }
+.mirror-caption .dot { width: 8px; height: 8px; border-radius: 50%; background: #5b6474; flex: none; }
+.phone-frame {
+  position: relative; padding: 12px; border-radius: 46px;
+  background: linear-gradient(160deg, #2a2f3a, #14171d 55%, #0d0f13);
+  box-shadow: 0 0 0 2px #3b4250, 0 0 0 3px #0a0b0e, 0 30px 70px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.phone-screen { border-radius: 34px; overflow: hidden; background: #000; line-height: 0; }
+.phone-frame .phone-canvas {
+  display: block; width: auto; height: auto; border-radius: 0; box-shadow: none; cursor: default;
+  max-height: calc(100vh - 32px - 30px - 24px);
+  max-width: calc(100vw - 32px - 24px - 14px - 60px);
+  min-width: 180px; min-height: 320px;
+}
+.phone-frame .phone-canvas.control { cursor: pointer; touch-action: none; }
+.phone-key { position: absolute; width: 4px; border-radius: 2px; background: #3b4250; }
+.phone-key.left { left: -5px; top: 120px; height: 46px; }
+.phone-key.left.second { top: 176px; }
+.phone-key.right { right: -5px; top: 150px; height: 70px; }
+.mirror-tools {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none;
+  width: 60px; max-height: 100%; overflow-y: auto; padding: 8px 0;
+  border-radius: 16px; background: var(--mm-surface); border: 1px solid var(--mm-border);
+  box-shadow: 0 16px 40px rgba(0,0,0,.35);
+}
+.tool {
+  display: grid; place-items: center; flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px;
+  background: none; color: var(--mm-text);
+}
+.tool:hover { background: var(--mm-surface-hover, rgba(127,127,127,.12)); }
+.tool.on { background: var(--mm-accent); color: var(--mm-on-accent); }
+.tool.danger { color: var(--mm-danger-text); }
+.tool.danger:hover { background: var(--mm-danger-text); color: #fff; }
+.tool-sep { width: 28px; height: 1px; margin: 6px 0; background: var(--mm-border); flex: none; }
+.mirror:fullscreen { padding: 0; background: #000; }
+.mirror:fullscreen .mirror-tools, .mirror:fullscreen .mirror-caption { display: none; }
+.mirror:fullscreen .phone-frame { padding: 0; background: none; box-shadow: none; border-radius: 0; }
+.mirror:fullscreen .phone-key { display: none; }
+.mirror:fullscreen .phone-screen { border-radius: 0; }
+.mirror:fullscreen .phone-canvas { max-height: 100vh; max-width: 100vw; }
+@media (max-height: 520px) { .phone-key { display: none; } }
+
+/* Floating phone window (frameless, transparent): only the phone and its tools */
+html.mirror-window, html.mirror-window body, html.mirror-window #root { background: transparent; overflow: hidden; }
+.mirror.floating { background: transparent; padding: 16px; }
+.mirror.floating .mirror-caption {
+  -webkit-app-region: drag; cursor: grab; width: 100%; padding: 0 4px 0 12px; border-radius: 999px;
+  background: rgba(14,17,24,.82); backdrop-filter: blur(8px); box-shadow: 0 6px 18px rgba(0,0,0,.35);
+}
+.mirror.floating .phone-frame { -webkit-app-region: drag; }
+.mirror.floating .phone-canvas, .mirror.floating button, .mirror.floating .mirror-tools { -webkit-app-region: no-drag; }
+.mirror.floating .phone-frame { box-shadow: 0 0 0 2px #3b4250, 0 0 0 3px #0a0b0e, 0 14px 30px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06); }
+.mirror.floating .mirror-tools { box-shadow: 0 8px 22px rgba(0,0,0,.35); }
+.win-btns { margin-left: auto; display: flex; gap: 2px; }
+.win-btn { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 50%; background: none; color: #e9ecf3; }
+.win-btn:hover { background: rgba(255,255,255,.15); }
+.mirror-window .toasts { -webkit-app-region: no-drag; }

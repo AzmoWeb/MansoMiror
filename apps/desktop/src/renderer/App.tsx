@@ -3,8 +3,7 @@ import type { UpdateState, AirPlayState, AppInfo, CaptureSource, DiscoveredDevic
 import { errorText, type ErrorCode } from "../shared/protocol.ts";
 import { bitrateFor, captureScreen, createHost, createViewer, watchStats, type LiveStats } from "./webrtc.ts";
 import { Icon, LogoMark, Modal, Svg, Toasts, useCountdown, useElapsed, type Toast } from "./ui.tsx";
-import { AndroidPanel, AndroidScreen } from "./android-ui.tsx";
-import { IPhoneScreen } from "./iphone-ui.tsx";
+import { AndroidPanel } from "./android-ui.tsx";
 import type { AndroidDevice } from "../shared/api.ts";
 
 declare global {
@@ -205,7 +204,6 @@ export function App() {
         setPeerRecording(false);
         setHost({ s: "idle" });
         setViewer({ s: "idle" });
-        setAndroidDevice(null);
         toast("Toutes les connexions ont été coupées.", "ok");
       }),
     [toast, stopHostMedia],
@@ -233,7 +231,6 @@ export function App() {
     setViewer({ s: "watching", hostName: res.hostName, stream: await stream, since: Date.now() });
   }
 
-  const [androidDevice, setAndroidDevice] = useState<AndroidDevice | null>(null);
   const [airplay, setAirplay] = useState<AirPlayState | null>(null);
   useEffect(() => {
     void mm.airplayState().then(setAirplay);
@@ -242,32 +239,6 @@ export function App() {
   const airplayOn = airplay?.status === "running";
 
   const active = host.s === "waiting" || host.s === "sharing" || viewer.s === "watching" || airplayOn;
-
-  if (airplay?.status === "running" && airplay.inApp && airplay.streaming) {
-    return (
-      <>
-        <IPhoneScreen name={airplay.name} toast={toast} onKill={() => void mm.killAll()} onStop={() => void mm.airplayStop()} />
-        <Toasts items={toasts} />
-      </>
-    );
-  }
-
-  if (androidDevice) {
-    return (
-      <>
-        <AndroidScreen
-          device={androidDevice}
-          toast={toast}
-          onKill={() => void mm.killAll()}
-          onClose={(reason) => {
-            setAndroidDevice(null);
-            if (reason) toast(reason);
-          }}
-        />
-        <Toasts items={toasts} />
-      </>
-    );
-  }
 
   if (viewer.s === "watching") {
     return (
@@ -340,7 +311,10 @@ export function App() {
             onNewPin={() => void newPin()}
             onStopShare={() => void stopSharing()}
             onConnectTo={(target) => setViewer({ s: "pin", target })}
-            onOpenAndroid={setAndroidDevice}
+            onOpenAndroid={(d: AndroidDevice) => {
+              // The phone opens in its own floating window, over the desktop.
+              void mm.mirrorOpen({ serial: d.serial, model: d.model, transport: d.transport }).then((ok) => !ok && toast("Impossible d'ouvrir le téléphone.", "error"));
+            }}
             settings={settings}
           />
         )}
@@ -498,7 +472,7 @@ function AirPlayPanel() {
         <div className="airplay-on">
           <div>
             <p className="live">
-              <span className="dot live-dot" /> Visible par les iPhone et iPad du réseau
+              <span className="dot live-dot" /> {st.streaming ? "iPhone affiché dans sa fenêtre" : "Visible par les iPhone et iPad du réseau"}
             </p>
             {st.announced === null && (
               <p className="error" role="alert">

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { MansoApi } from "../shared/api.ts";
 import { H264CanvasDecoder, type DecoderStats } from "./h264-decoder.ts";
-import { Icon, Svg, useElapsed, type Toast } from "./ui.tsx";
+import { Icon, useElapsed, type Toast } from "./ui.tsx";
+import { MirrorIcon, MirrorLayout, RecordGlyph, ToolButton, ToolSeparator, useMirrorTools } from "./mirror-ui.tsx";
 
 const mm = (window as unknown as { mm: MansoApi }).mm;
 
@@ -10,7 +11,7 @@ const mm = (window as unknown as { mm: MansoApi }).mm;
  * Sound is played by the computer. iOS does not allow remote control, so the
  * picture is view-only.
  */
-export function IPhoneScreen({ name, onStop, onKill, toast }: { name: string; onStop: () => void; onKill: () => void; toast: (t: string, tone?: Toast["tone"]) => void }) {
+export function IPhoneScreen({ name, onStop, onKill, toast, floating = false }: { name: string; onStop: () => void; onKill: () => void; toast: (t: string, tone?: Toast["tone"]) => void; floating?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<DecoderStats | null>(null);
@@ -29,41 +30,39 @@ export function IPhoneScreen({ name, onStop, onKill, toast }: { name: string; on
     };
   }, []);
 
-  async function screenshot() {
-    const blob = await new Promise<Blob | null>((r) => canvas.current!.toBlob(r, "image/png"));
-    if (!blob) return;
-    if (await mm.saveFile("png", await blob.arrayBuffer())) toast("Capture enregistrée.", "ok");
-  }
+  const t = useMirrorTools(canvas, stage, toast, floating, stats);
 
   return (
-    <div className="viewer android" data-testid="iphone-screen">
-      <header className="viewer-bar">
-        <span className="live">
-          <span className="dot live-dot" />
-        </span>
-        <b>iPhone / iPad</b>
-        <span className="muted small">sur {name}</span>
-        <span className="mono muted small">{elapsed}</span>
-        <span className="mono muted small stats" data-testid="iphone-stats">
-          {stats && stats.width ? `${stats.width}×${stats.height} · ${stats.fps} i/s · AirPlay · son sur l'ordinateur` : "Réception de l'image…"}
-        </span>
-        <span className="grow" />
-        <button className="icon-btn" onClick={() => void screenshot()} title="Capture d'écran" aria-label="Capture d'écran">
-          <Svg d={Icon.camera} />
-        </button>
-        <button className="icon-btn" onClick={() => void stage.current?.requestFullscreen()} title="Plein écran" aria-label="Plein écran">
-          <Svg d={Icon.full} />
-        </button>
-        <button className="btn ghost sm" onClick={onStop}>
-          Arrêter la réception
-        </button>
-        <button className="btn danger sm" onClick={onKill} title="Ctrl+Alt+K">
-          Tout couper
-        </button>
-      </header>
-      <div className="stage phone-stage iphone-stage" ref={stage}>
-        <canvas ref={canvas} width={1} height={1} className="phone-canvas iphone-canvas" data-testid="iphone-canvas" />
-      </div>
-    </div>
+    <MirrorLayout
+      testId="iphone-screen"
+      stageRef={stage}
+      live
+      floating={floating}
+      onClose={onStop}
+      caption={
+        <>
+          <b>iPhone / iPad</b>
+          <span className="mono muted small">{elapsed}</span>
+          <span className="mono muted small stats" data-testid="iphone-stats">
+            {stats && stats.width ? `${stats.width}×${stats.height} · ${stats.fps} i/s · AirPlay · son sur l'ordinateur` : "Réception de l'image…"}
+          </span>
+        </>
+      }
+      phone={<canvas ref={canvas} width={1} height={1} className="phone-canvas" data-testid="iphone-canvas" title={`Recopié sur ${name}`} />}
+      tools={
+        <>
+          <ToolButton icon={Icon.full} label="Plein écran" onClick={t.fullscreen} />
+          <ToolButton icon={Icon.camera} label="Capture d'écran" onClick={() => void t.screenshot()} />
+          <ToolButton label={t.recording ? "Arrêter l'enregistrement" : "Enregistrer la vidéo"} onClick={t.toggleRecording} active={t.recording}>
+            <RecordGlyph on={t.recording} />
+          </ToolButton>
+          <ToolButton icon={MirrorIcon.pin} label="Toujours au premier plan" onClick={() => void t.toggleOnTop()} active={t.onTop} />
+          {!floating && <ToolButton icon={MirrorIcon.compact} label="Fenêtre à la taille du téléphone" onClick={() => void t.toggleCompact()} active={t.compact} />}
+          <ToolSeparator />
+          <ToolButton icon={MirrorIcon.eject} label="Arrêter la réception" onClick={onStop} />
+          <ToolButton icon={Icon.close} label="Tout couper" onClick={onKill} danger />
+        </>
+      }
+    />
   );
 }

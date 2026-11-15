@@ -4,7 +4,9 @@ import type { AirPlayState } from "../main/airplay.ts";
 import type { AndroidDevice } from "../main/android.ts";
 import type { AndroidEvent, AndroidInput } from "../main/android-service.ts";
 import type { UpdateState } from "../main/updater.ts";
+import type { MirrorTarget } from "../main/main.ts";
 
+export type { MirrorTarget };
 export type { Settings, HistoryEntry, DiscoveredDevice, AirPlayState, AndroidDevice, AndroidEvent, AndroidInput, UpdateState };
 
 export interface AndroidVideoPacket {
@@ -81,6 +83,15 @@ export interface MansoApi {
   airplayState(recheck?: boolean): Promise<AirPlayState>;
   airplayStart(): Promise<AirPlayState>;
   airplayStop(): Promise<void>;
+  /** Phone screen window: compact (sized to width×height of content) and/or always on top. */
+  windowLayout(l: { compact: boolean; onTop: boolean; width?: number; height?: number }): Promise<void>;
+  /** Minimize or close the window this page is in (floating phone window). */
+  windowAction(action: "minimize" | "close"): Promise<void>;
+  /** Shows an Android phone in its own floating window. */
+  mirrorOpen(d: { serial: string; model: string; transport: "usb" | "wifi" }): Promise<boolean>;
+  mirrorClose(): Promise<void>;
+  /** The floating phone window was closed. */
+  onMirrorClosed(cb: (t: MirrorTarget | null) => void): () => void;
   /** Adds a line to main.log (video decoder diagnostics). */
   diag(message: string): Promise<void>;
   /** Opens the folder with main.log and uxplay.log. */
@@ -141,6 +152,11 @@ export const IPC = {
   airplayReplay: "mm:airplay:replay",
   openLogs: "mm:logs:open",
   diag: "mm:diag",
+  windowLayout: "mm:window:layout",
+  windowAction: "mm:window:action",
+  mirrorOpen: "mm:mirror:open",
+  mirrorClose: "mm:mirror:close",
+  mirrorClosed: "mm:mirror:closed",
   androidStatus: "mm:android:status",
   androidDevices: "mm:android:devices",
   androidPair: "mm:android:pair",
